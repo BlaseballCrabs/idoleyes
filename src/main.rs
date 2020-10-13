@@ -140,7 +140,7 @@ fn get_best() -> Result<Option<String>> {
         .next()
         .ok_or_else(|| anyhow!("Couldn't find name for best SO9 pitcher!"))?;
     let mut text = String::new();
-    writeln!(text, "**Day {}**", data.value.games.sim.day)?;
+    writeln!(text, "**Day {}**", data.value.games.sim.day + 2)?; // tomorrow, zero-indexed
     writeln!(
         text,
         "Best pitcher by SO/9: {} ({}, {} vs. {})",
