@@ -253,8 +253,8 @@ fn get_best() -> Result<Option<String>> {
                     .iter()
                     .find(|y| y.player_id == x.home_pitcher)
                     .ok_or_else(|| anyhow!("Missing pitcher!"))?;
-                let away_ratio = away_pitcher.k_per_9 / home_soab;
-                let home_ratio = home_pitcher.k_per_9 / away_soab;
+                let away_ratio = away_pitcher.k_per_9 * home_soab;
+                let home_ratio = home_pitcher.k_per_9 * away_soab;
                 if away_ratio > home_ratio {
                     Ok((away_pitcher, x, away_ratio))
                 } else {
@@ -312,7 +312,7 @@ fn get_best() -> Result<Option<String>> {
     };
     write!(
         text,
-        "Best pitcher by (SO/9)/(SO/AB): {} ({:.3}, {} vs. {})",
+        "Best pitcher by (SO/9)(SO/AB): {} ({:.3}, {} vs. {})",
         best_stat_ratio_player.player_name, best_stat_ratio, stat_ratio_away, stat_ratio_home,
     )?;
     Ok(Some(text))
