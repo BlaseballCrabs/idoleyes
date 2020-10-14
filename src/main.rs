@@ -312,7 +312,7 @@ fn get_best() -> Result<Option<String>> {
     };
     write!(
         text,
-        "Best pitcher by (SO/9)/(SO/AB): {} ({}, {} vs. {})",
+        "Best pitcher by (SO/9)/(SO/AB): {} ({:.3}, {} vs. {})",
         best_stat_ratio_player.player_name, best_stat_ratio, stat_ratio_away, stat_ratio_home,
     )?;
     Ok(Some(text))
