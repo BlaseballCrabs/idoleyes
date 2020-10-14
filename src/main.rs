@@ -98,31 +98,14 @@ pub struct Team {
     pub perm_attr: Vec<String>,
 }
 
-fn get_batters_and_team(team_id: &str) -> Result<(Vec<Player>, Team)> {
+fn get_team(team_id: &str) -> Result<Team> {
     let client = reqwest::blocking::Client::new();
     let team: Team = client
         .get("https://www.blaseball.com/database/team")
         .query(&[("id", team_id)])
         .send()?
         .json()?;
-    let batter_ids = team.lineup.join(",");
-    let batters: Vec<Player> = client
-        .get("https://www.blaseball.com/database/players")
-        .query(&[("ids", batter_ids)])
-        .send()?
-        .json()?;
-    Ok((batters, team))
-}
-
-fn adjust_patheticism(player: &Player, team: &Team) -> f64 {
-    let base = player.patheticism;
-    let inverted = 1.0 - base;
-    let electric = team.perm_attr.iter().any(|x| x == "ELECTRIC");
-    if electric {
-        inverted
-    } else {
-        inverted / 2.0
-    }
+    Ok(team)
 }
 
 fn get_best() -> Result<Option<String>> {
@@ -195,48 +178,6 @@ fn get_best() -> Result<Option<String>> {
         })
         .next()
         .ok_or_else(|| anyhow!("Couldn't find name for best SO9 pitcher!"))?;
-    let (best_stlat_ratio_player, best_stlat_ratio_game, best_stlat_ratio) =
-        fallible_iterator::convert(data.value.games.tomorrow_schedule.iter().map(
-            |x| -> Result<_> {
-                let (away_batters, away_team) = get_batters_and_team(&x.away_team)?;
-                let (home_batters, home_team) = get_batters_and_team(&x.home_team)?;
-                let away_patheticisms: Vec<_> = away_batters
-                    .iter()
-                    .map(|x| adjust_patheticism(x, &away_team))
-                    .collect();
-                let home_patheticisms: Vec<_> = home_batters
-                    .iter()
-                    .map(|x| adjust_patheticism(x, &home_team))
-                    .collect();
-                let away_patheticism = away_patheticisms
-                    .iter()
-                    .product::<f64>()
-                    .powf(1.0 / away_patheticisms.len() as f64);
-                let home_patheticism = home_patheticisms
-                    .iter()
-                    .product::<f64>()
-                    .powf(1.0 / home_patheticisms.len() as f64);
-                let away_pitcher = req
-                    .iter()
-                    .find(|y| y.id == x.away_pitcher)
-                    .ok_or_else(|| anyhow!("Missing pitcher!"))?;
-                let home_pitcher = req
-                    .iter()
-                    .find(|y| y.id == x.home_pitcher)
-                    .ok_or_else(|| anyhow!("Missing pitcher!"))?;
-                let away_ruthlessness = (away_pitcher.ruthlessness * 4.0).atan() / 1.5;
-                let home_ruthlessness = (home_pitcher.ruthlessness * 4.0).atan() / 1.5;
-                let away_ratio = away_ruthlessness / home_patheticism;
-                let home_ratio = home_ruthlessness / away_patheticism;
-                if away_ratio > home_ratio {
-                    Ok((away_pitcher, x, away_ratio))
-                } else {
-                    Ok((home_pitcher, x, away_ratio))
-                }
-            },
-        ))
-        .max_by_key(|x| Ok(n64(x.2)))?
-        .ok_or_else(|| anyhow!("No best pitcher!"))?;
     let client = reqwest::blocking::Client::new();
     let strikeouts: Vec<StrikeoutLeaders> = client
         .get(
@@ -253,19 +194,19 @@ fn get_best() -> Result<Option<String>> {
     let (best_stat_ratio_player, best_stat_ratio_game, best_stat_ratio) =
         fallible_iterator::convert(data.value.games.tomorrow_schedule.iter().map(
             |x| -> Result<_> {
-                let (away_batters, _) = get_batters_and_team(&x.away_team)?;
-                let (home_batters, _) = get_batters_and_team(&x.home_team)?;
-                let away_strikeouts = away_batters.iter().map(|x| {
+                let away_team = get_team(&x.away_team)?;
+                let home_team = get_team(&x.home_team)?;
+                let away_strikeouts = away_team.lineup.iter().map(|x| {
                     strikeouts
                         .iter()
-                        .find(|y| x.id == y.player_id)
+                        .find(|y| &**x == &*y.player_id)
                         .unwrap()
                         .strikeouts
                 });
-                let away_at_bats = away_batters.iter().map(|x| {
+                let away_at_bats = away_team.lineup.iter().map(|x| {
                     at_bats
                         .iter()
-                        .find(|y| x.id == y.player_id)
+                        .find(|y| &**x == &*y.player_id)
                         .unwrap()
                         .at_bats
                 });
@@ -273,17 +214,17 @@ fn get_best() -> Result<Option<String>> {
                     .zip(away_at_bats)
                     .map(|(so, ab)| so as f64 / ab as f64)
                     .collect();
-                let home_strikeouts = home_batters.iter().map(|x| {
+                let home_strikeouts = home_team.lineup.iter().map(|x| {
                     strikeouts
                         .iter()
-                        .find(|y| x.id == y.player_id)
+                        .find(|y| &**x == &*y.player_id)
                         .unwrap()
                         .strikeouts
                 });
-                let home_at_bats = home_batters.iter().map(|x| {
+                let home_at_bats = home_team.lineup.iter().map(|x| {
                     at_bats
                         .iter()
-                        .find(|y| x.id == y.player_id)
+                        .find(|y| &**x == &*y.player_id)
                         .unwrap()
                         .at_bats
                 });
@@ -353,21 +294,6 @@ fn get_best() -> Result<Option<String>> {
         ruthlessness_away,
         ruthlessness_home
     )?;
-    let stlat_ratio_away = if best_stlat_ratio_player.id == best_stlat_ratio_game.away_pitcher {
-        format!("**{}**", best_stlat_ratio_game.away_team_name)
-    } else {
-        best_stlat_ratio_game.away_team_name.clone()
-    };
-    let stlat_ratio_home = if best_stlat_ratio_player.id == best_stlat_ratio_game.home_pitcher {
-        format!("**{}**", best_stlat_ratio_game.home_team_name)
-    } else {
-        best_stlat_ratio_game.home_team_name.clone()
-    };
-    writeln!(
-        text,
-        "(EXPERIMENTAL) Best pitcher by ||ruthlessness/patheticism: {} ({}, {} vs. {})||",
-        best_stlat_ratio_player.name, best_stlat_ratio, stlat_ratio_away, stlat_ratio_home,
-    )?;
     let stat_ratio_away = if best_stat_ratio_player.player_id == best_stat_ratio_game.away_pitcher {
         format!("**{}**", best_stat_ratio_game.away_team_name)
     } else {
@@ -380,7 +306,7 @@ fn get_best() -> Result<Option<String>> {
     };
     write!(
         text,
-        "(EXPERIMENTAL) Best pitcher by (SO/9)/(SO/AB): {} ({}, {} vs. {})",
+        "Best pitcher by (SO/9)/(SO/AB): {} ({}, {} vs. {})",
         best_stat_ratio_player.player_name, best_stat_ratio, stat_ratio_away, stat_ratio_home,
     )?;
     Ok(Some(text))
