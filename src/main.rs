@@ -162,6 +162,11 @@ fn get_best() -> Result<Option<String>> {
         .iter()
         .max_by_key(|x| n64(x.ruthlessness))
         .ok_or_else(|| anyhow!("No best pitcher!"))?;
+    let best_ruthlessness_so9 = pitcher_stats
+        .iter()
+        .find(|x| x.player_id == best_ruthlessness.id)
+        .ok_or_else(|| anyhow!("Lost player!"))?
+        .k_per_9;
     let best_ruthlessness_game = data
         .value
         .games
@@ -288,9 +293,10 @@ fn get_best() -> Result<Option<String>> {
     };
     writeln!(
         text,
-        "Best pitcher by ||ruthlessness: {} ({}, {} vs. {})||",
+        "Best pitcher by ||ruthlessness: {} ({:.3}, SO/9: {}, {} vs. {})||",
         best_ruthlessness.name,
         best_ruthlessness.ruthlessness,
+        best_ruthlessness_so9,
         ruthlessness_away,
         ruthlessness_home
     )?;
