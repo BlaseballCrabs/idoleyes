@@ -3,6 +3,7 @@
 use anyhow::{anyhow, Result};
 use chrono::prelude::*;
 use eventsource::reqwest::Client;
+use fallible_iterator::FallibleIterator;
 use noisy_float::prelude::*;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,7 @@ pub struct Player {
     pub id: String,
     pub name: String,
     pub ruthlessness: f64,
+    pub patheticism: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -68,6 +70,44 @@ pub struct Event {
 #[derive(Debug, Serialize)]
 pub struct Webhook<'a> {
     pub content: &'a str,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Team {
+    pub id: String,
+    pub lineup: Vec<String>,
+    pub rotation: Vec<String>,
+    pub bullpen: Vec<String>,
+    pub bench: Vec<String>,
+    pub perm_attr: Vec<String>,
+}
+
+fn get_batters_and_team(team_id: &str) -> Result<(Vec<Player>, Team)> {
+    let client = reqwest::blocking::Client::new();
+    let team: Team = client
+        .get("https://www.blaseball.com/database/team")
+        .query(&[("id", team_id)])
+        .send()?
+        .json()?;
+    let batter_ids = team.lineup.join(",");
+    let batters: Vec<Player> = client
+        .get("https://www.blaseball.com/database/players")
+        .query(&[("ids", batter_ids)])
+        .send()?
+        .json()?;
+    Ok((batters, team))
+}
+
+fn adjust_patheticism(player: &Player, team: &Team) -> f64 {
+    let base = player.patheticism;
+    let inverted = 1.0 - base;
+    let electric = team.perm_attr.iter().any(|x| x == "ELECTRIC");
+    if electric {
+        inverted
+    } else {
+        inverted / 2.0
+    }
 }
 
 fn get_best() -> Result<Option<String>> {
@@ -117,10 +157,10 @@ fn get_best() -> Result<Option<String>> {
     let req = reqwest::blocking::get(&format!(
         "https://www.blaseball.com/database/players?ids={}",
         comma_pitchers
-    ))?;
+    ))?
+    .json::<Vec<Player>>()?;
     let best_ruthlessness = req
-        .json::<Vec<Player>>()?
-        .into_iter()
+        .iter()
         .max_by_key(|x| n64(x.ruthlessness))
         .ok_or_else(|| anyhow!("No best pitcher!"))?;
     let best_ruthlessness_game = data
@@ -139,6 +179,48 @@ fn get_best() -> Result<Option<String>> {
         })
         .next()
         .ok_or_else(|| anyhow!("Couldn't find name for best SO9 pitcher!"))?;
+    let (best_ratio_player, best_ratio_game, best_ratio) =
+        fallible_iterator::convert(data.value.games.tomorrow_schedule.iter().map(
+            |x| -> Result<_> {
+                let (away_batters, away_team) = get_batters_and_team(&x.away_team)?;
+                let (home_batters, home_team) = get_batters_and_team(&x.home_team)?;
+                let away_patheticisms: Vec<_> = away_batters
+                    .iter()
+                    .map(|x| adjust_patheticism(x, &away_team))
+                    .collect();
+                let home_patheticisms: Vec<_> = home_batters
+                    .iter()
+                    .map(|x| adjust_patheticism(x, &home_team))
+                    .collect();
+                let away_patheticism = away_patheticisms
+                    .iter()
+                    .product::<f64>()
+                    .powf(1.0 / away_patheticisms.len() as f64);
+                let home_patheticism = home_patheticisms
+                    .iter()
+                    .product::<f64>()
+                    .powf(1.0 / home_patheticisms.len() as f64);
+                let away_pitcher = req
+                    .iter()
+                    .find(|y| y.id == x.away_pitcher)
+                    .ok_or_else(|| anyhow!("Missing pitcher!"))?;
+                let home_pitcher = req
+                    .iter()
+                    .find(|y| y.id == x.home_pitcher)
+                    .ok_or_else(|| anyhow!("Missing pitcher!"))?;
+                let away_ruthlessness = (away_pitcher.ruthlessness * 4.0).atan() / 1.5;
+                let home_ruthlessness = (home_pitcher.ruthlessness * 4.0).atan() / 1.5;
+                let away_ratio = away_ruthlessness / home_patheticism;
+                let home_ratio = home_ruthlessness / away_patheticism;
+                if away_ratio > home_ratio {
+                    Ok((away_pitcher, x, away_ratio))
+                } else {
+                    Ok((home_pitcher, x, away_ratio))
+                }
+            },
+        ))
+        .max_by_key(|x| Ok(n64(x.2)))?
+        .ok_or_else(|| anyhow!("No best pitcher!"))?;
     let mut text = String::new();
     writeln!(text, "**Day {}**", data.value.games.sim.day + 2)?; // tomorrow, zero-indexed
     writeln!(
@@ -146,13 +228,21 @@ fn get_best() -> Result<Option<String>> {
         "Best pitcher by SO/9: {} ({}, {} vs. {})",
         best_so9_name, best_so9.k_per_9, best_so9_game.away_team_name, best_so9_game.home_team_name
     )?;
-    write!(
+    writeln!(
         text,
         "Best pitcher by ||ruthlessness: {} ({}, {} vs. {})||",
         best_ruthlessness.name,
         best_ruthlessness.ruthlessness,
         best_ruthlessness_game.away_team_name,
         best_ruthlessness_game.home_team_name
+    )?;
+    write!(
+        text,
+        "(EXPERIMENTAL) Best pitcher by ||ruthlessness/patheticism: {} ({}, {} vs. {})||",
+        best_ratio_player.name,
+        best_ratio,
+        best_ratio_game.away_team_name,
+        best_ratio_game.home_team_name
     )?;
     Ok(Some(text))
 }
