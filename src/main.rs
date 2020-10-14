@@ -148,7 +148,7 @@ fn get_best() -> Result<Option<String>> {
     )?;
     write!(
         text,
-        "Best pitcher by ruthlessness: {} ({}, {} vs. {})",
+        "Best pitcher by ||ruthlessness: {} ({}, {} vs. {})||",
         best_ruthlessness.name,
         best_ruthlessness.ruthlessness,
         best_ruthlessness_game.away_team_name,
