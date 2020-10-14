@@ -13,8 +13,23 @@ use std::fmt::Write;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PitchingStats {
     pub player_id: String,
+    pub player_name: String,
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub k_per_9: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StrikeoutLeaders {
+    pub player_id: String,
+    #[serde(with = "serde_with::rust::display_fromstr")]
+    pub strikeouts: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AtBatLeaders {
+    pub player_id: String,
+    #[serde(with = "serde_with::rust::display_fromstr")]
+    pub at_bats: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -128,14 +143,15 @@ fn get_best() -> Result<Option<String>> {
         .flat_map(|x| IntoIter::new([&*x.home_pitcher, &*x.away_pitcher]))
         .collect::<Vec<&str>>()
         .join(",");
-    let best_so9 =
+    let pitcher_stats: Vec<PitchingStats> =
         reqwest::blocking::get(&format!(
             "https://api.blaseball-reference.com/v1/playerStats?category=pitching&playerIds={}&season={}",
             comma_pitchers,
             data.value.games.sim.season
         ))?
-        .json::<Vec<PitchingStats>>()?
-        .into_iter()
+        .json()?;
+    let best_so9 = pitcher_stats
+        .iter()
         .max_by_key(|x| n64(x.k_per_9))
         .ok_or_else(|| anyhow!("No best pitcher!"))?;
     let (best_so9_game, best_so9_name) = data
@@ -179,7 +195,7 @@ fn get_best() -> Result<Option<String>> {
         })
         .next()
         .ok_or_else(|| anyhow!("Couldn't find name for best SO9 pitcher!"))?;
-    let (best_ratio_player, best_ratio_game, best_ratio) =
+    let (best_stlat_ratio_player, best_stlat_ratio_game, best_stlat_ratio) =
         fallible_iterator::convert(data.value.games.tomorrow_schedule.iter().map(
             |x| -> Result<_> {
                 let (away_batters, away_team) = get_batters_and_team(&x.away_team)?;
@@ -212,6 +228,87 @@ fn get_best() -> Result<Option<String>> {
                 let home_ruthlessness = (home_pitcher.ruthlessness * 4.0).atan() / 1.5;
                 let away_ratio = away_ruthlessness / home_patheticism;
                 let home_ratio = home_ruthlessness / away_patheticism;
+                if away_ratio > home_ratio {
+                    Ok((away_pitcher, x, away_ratio))
+                } else {
+                    Ok((home_pitcher, x, away_ratio))
+                }
+            },
+        ))
+        .max_by_key(|x| Ok(n64(x.2)))?
+        .ok_or_else(|| anyhow!("No best pitcher!"))?;
+    let client = reqwest::blocking::Client::new();
+    let strikeouts: Vec<StrikeoutLeaders> = client
+        .get(
+            "https://api.blaseball-reference.com/v1/seasonLeaders?category=batting&stat=strikeouts",
+        )
+        .query(&[("season", data.value.games.sim.season)])
+        .send()?
+        .json()?;
+    let at_bats: Vec<AtBatLeaders> = client
+        .get("https://api.blaseball-reference.com/v1/seasonLeaders?category=batting&stat=at_bats")
+        .query(&[("season", data.value.games.sim.season)])
+        .send()?
+        .json()?;
+    let (best_stat_ratio_player, best_stat_ratio_game, best_stat_ratio) =
+        fallible_iterator::convert(data.value.games.tomorrow_schedule.iter().map(
+            |x| -> Result<_> {
+                let (away_batters, _) = get_batters_and_team(&x.away_team)?;
+                let (home_batters, _) = get_batters_and_team(&x.home_team)?;
+                let away_strikeouts = away_batters.iter().map(|x| {
+                    strikeouts
+                        .iter()
+                        .find(|y| x.id == y.player_id)
+                        .unwrap()
+                        .strikeouts
+                });
+                let away_at_bats = away_batters.iter().map(|x| {
+                    at_bats
+                        .iter()
+                        .find(|y| x.id == y.player_id)
+                        .unwrap()
+                        .at_bats
+                });
+                let away_soabs: Vec<_> = away_strikeouts
+                    .zip(away_at_bats)
+                    .map(|(so, ab)| so as f64 / ab as f64)
+                    .collect();
+                let home_strikeouts = home_batters.iter().map(|x| {
+                    strikeouts
+                        .iter()
+                        .find(|y| x.id == y.player_id)
+                        .unwrap()
+                        .strikeouts
+                });
+                let home_at_bats = home_batters.iter().map(|x| {
+                    at_bats
+                        .iter()
+                        .find(|y| x.id == y.player_id)
+                        .unwrap()
+                        .at_bats
+                });
+                let home_soabs: Vec<_> = home_strikeouts
+                    .zip(home_at_bats)
+                    .map(|(so, ab)| so as f64 / ab as f64)
+                    .collect();
+                let away_soab = away_soabs
+                    .iter()
+                    .product::<f64>()
+                    .powf(1.0 / away_soabs.len() as f64);
+                let home_soab = home_soabs
+                    .iter()
+                    .product::<f64>()
+                    .powf(1.0 / home_soabs.len() as f64);
+                let away_pitcher = pitcher_stats
+                    .iter()
+                    .find(|y| y.player_id == x.away_pitcher)
+                    .ok_or_else(|| anyhow!("Missing pitcher!"))?;
+                let home_pitcher = pitcher_stats
+                    .iter()
+                    .find(|y| y.player_id == x.home_pitcher)
+                    .ok_or_else(|| anyhow!("Missing pitcher!"))?;
+                let away_ratio = away_pitcher.k_per_9 / home_soab;
+                let home_ratio = home_pitcher.k_per_9 / away_soab;
                 if away_ratio > home_ratio {
                     Ok((away_pitcher, x, away_ratio))
                 } else {
@@ -256,20 +353,35 @@ fn get_best() -> Result<Option<String>> {
         ruthlessness_away,
         ruthlessness_home
     )?;
-    let ratio_away = if best_ratio_player.id == best_ratio_game.away_pitcher {
-        format!("**{}**", best_ratio_game.away_team_name)
+    let stlat_ratio_away = if best_stlat_ratio_player.id == best_stlat_ratio_game.away_pitcher {
+        format!("**{}**", best_stlat_ratio_game.away_team_name)
     } else {
-        best_ratio_game.away_team_name.clone()
+        best_stlat_ratio_game.away_team_name.clone()
     };
-    let ratio_home = if best_ratio_player.id == best_ratio_game.home_pitcher {
-        format!("**{}**", best_ratio_game.home_team_name)
+    let stlat_ratio_home = if best_stlat_ratio_player.id == best_stlat_ratio_game.home_pitcher {
+        format!("**{}**", best_stlat_ratio_game.home_team_name)
     } else {
-        best_ratio_game.home_team_name.clone()
+        best_stlat_ratio_game.home_team_name.clone()
+    };
+    writeln!(
+        text,
+        "(EXPERIMENTAL) Best pitcher by ||ruthlessness/patheticism: {} ({}, {} vs. {})||",
+        best_stlat_ratio_player.name, best_stlat_ratio, stlat_ratio_away, stlat_ratio_home,
+    )?;
+    let stat_ratio_away = if best_stat_ratio_player.player_id == best_stat_ratio_game.away_pitcher {
+        format!("**{}**", best_stat_ratio_game.away_team_name)
+    } else {
+        best_stat_ratio_game.away_team_name.clone()
+    };
+    let stat_ratio_home = if best_stat_ratio_player.player_id == best_stat_ratio_game.home_pitcher {
+        format!("**{}**", best_stat_ratio_game.home_team_name)
+    } else {
+        best_stat_ratio_game.home_team_name.clone()
     };
     write!(
         text,
-        "(EXPERIMENTAL) Best pitcher by ||ruthlessness/patheticism: {} ({}, {} vs. {})||",
-        best_ratio_player.name, best_ratio, ratio_away, ratio_home,
+        "(EXPERIMENTAL) Best pitcher by (SO/9)/(SO/AB): {} ({}, {} vs. {})",
+        best_stat_ratio_player.player_name, best_stat_ratio, stat_ratio_away, stat_ratio_home,
     )?;
     Ok(Some(text))
 }
