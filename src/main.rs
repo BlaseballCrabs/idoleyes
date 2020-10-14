@@ -223,26 +223,53 @@ fn get_best() -> Result<Option<String>> {
         .ok_or_else(|| anyhow!("No best pitcher!"))?;
     let mut text = String::new();
     writeln!(text, "**Day {}**", data.value.games.sim.day + 2)?; // tomorrow, zero-indexed
+    let so9_away = if best_so9.player_id == best_so9_game.away_pitcher {
+        format!("**{}**", best_so9_game.away_team_name)
+    } else {
+        best_so9_game.away_team_name.clone()
+    };
+    let so9_home = if best_so9.player_id == best_so9_game.home_pitcher {
+        format!("**{}**", best_so9_game.home_team_name)
+    } else {
+        best_so9_game.home_team_name.clone()
+    };
     writeln!(
         text,
         "Best pitcher by SO/9: {} ({}, {} vs. {})",
-        best_so9_name, best_so9.k_per_9, best_so9_game.away_team_name, best_so9_game.home_team_name
+        best_so9_name, best_so9.k_per_9, so9_away, so9_home
     )?;
+    let ruthlessness_away = if best_ruthlessness.id == best_ruthlessness_game.away_pitcher {
+        format!("**{}**", best_ruthlessness_game.away_team_name)
+    } else {
+        best_ruthlessness_game.away_team_name.clone()
+    };
+    let ruthlessness_home = if best_ruthlessness.id == best_ruthlessness_game.home_pitcher {
+        format!("**{}**", best_ruthlessness_game.home_team_name)
+    } else {
+        best_ruthlessness_game.home_team_name.clone()
+    };
     writeln!(
         text,
         "Best pitcher by ||ruthlessness: {} ({}, {} vs. {})||",
         best_ruthlessness.name,
         best_ruthlessness.ruthlessness,
-        best_ruthlessness_game.away_team_name,
-        best_ruthlessness_game.home_team_name
+        ruthlessness_away,
+        ruthlessness_home
     )?;
+    let ratio_away = if best_ratio_player.id == best_ratio_game.away_pitcher {
+        format!("**{}**", best_ratio_game.away_team_name)
+    } else {
+        best_ratio_game.away_team_name.clone()
+    };
+    let ratio_home = if best_ratio_player.id == best_ratio_game.home_pitcher {
+        format!("**{}**", best_ratio_game.home_team_name)
+    } else {
+        best_ratio_game.home_team_name.clone()
+    };
     write!(
         text,
         "(EXPERIMENTAL) Best pitcher by ||ruthlessness/patheticism: {} ({}, {} vs. {})||",
-        best_ratio_player.name,
-        best_ratio,
-        best_ratio_game.away_team_name,
-        best_ratio_game.home_team_name
+        best_ratio_player.name, best_ratio, ratio_away, ratio_home,
     )?;
     Ok(Some(text))
 }
