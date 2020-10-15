@@ -48,6 +48,16 @@ rec {
       # File a bug if you depend on any for non-debug work!
       debug = internal.debugCrate { inherit packageId; };
     };
+    "idol_historical" = rec {
+      packageId = "idol_historical";
+      build = internal.buildRustCrateWithFeatures {
+        packageId = "idol_historical";
+      };
+
+      # Debug support which might change between releases.
+      # File a bug if you depend on any for non-debug work!
+      debug = internal.debugCrate { inherit packageId; };
+    };
     "idol_predictor" = rec {
       packageId = "idol_predictor";
       build = internal.buildRustCrateWithFeatures {
@@ -284,6 +294,12 @@ rec {
             usesDefaultFeatures = false;
           }
           {
+            name = "serde";
+            packageId = "serde";
+            optional = true;
+            usesDefaultFeatures = false;
+          }
+          {
             name = "time";
             packageId = "time";
             optional = true;
@@ -303,7 +319,7 @@ rec {
           "unstable-locales" = [ "pure-rust-locales" "alloc" ];
           "wasmbind" = [ "wasm-bindgen" "js-sys" ];
         };
-        resolvedDefaultFeatures = [ "clock" "default" "libc" "oldtime" "std" "time" "winapi" ];
+        resolvedDefaultFeatures = [ "clock" "default" "libc" "oldtime" "serde" "std" "time" "winapi" ];
       };
       "conv" = rec {
         crateName = "conv";
@@ -1251,7 +1267,7 @@ rec {
           {
             name = "reqwest";
             packageId = "reqwest";
-            features = [ "json" ];
+            features = [ "json" "blocking" ];
           }
           {
             name = "serde";
@@ -1309,6 +1325,52 @@ rec {
           {
             name = "log";
             packageId = "log";
+          }
+          {
+            name = "reqwest";
+            packageId = "reqwest";
+            features = [ "json" ];
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+          }
+        ];
+        
+      };
+      "idol_historical" = rec {
+        crateName = "idol_historical";
+        version = "0.1.0";
+        edition = "2018";
+        crateBin = [
+          { name = "idol_historical"; path = "src/main.rs"; }
+        ];
+        src = (builtins.filterSource sourceFilter ./idol_historical);
+        authors = [
+          "leo60228 <leo@60228.dev>"
+        ];
+        dependencies = [
+          {
+            name = "anyhow";
+            packageId = "anyhow";
+          }
+          {
+            name = "chrono";
+            packageId = "chrono";
+            features = [ "serde" ];
+          }
+          {
+            name = "idol_api";
+            packageId = "idol_api";
+          }
+          {
+            name = "idol_predictor";
+            packageId = "idol_predictor";
           }
           {
             name = "reqwest";

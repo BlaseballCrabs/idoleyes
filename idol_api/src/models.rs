@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PitchingStats {
     pub player_id: String,
     pub player_name: String,
@@ -8,21 +8,21 @@ pub struct PitchingStats {
     pub k_per_9: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrikeoutLeader {
     pub player_id: String,
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub strikeouts: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AtBatLeader {
     pub player_id: String,
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub at_bats: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Player {
     pub id: String,
@@ -31,14 +31,14 @@ pub struct Player {
     pub patheticism: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Position {
     pub id: String,
     pub data: Player,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Game {
     pub id: String,
@@ -52,9 +52,10 @@ pub struct Game {
     pub home_team_name: String,
     pub away_odds: f64,
     pub home_odds: f64,
+    pub inning: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Simulation {
     pub season: usize,
@@ -62,24 +63,24 @@ pub struct Simulation {
     pub phase: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Games {
     pub sim: Simulation,
     pub tomorrow_schedule: Vec<Game>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventValue {
     pub games: Games,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub value: EventValue,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Team {
     pub id: String,
