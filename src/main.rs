@@ -159,6 +159,12 @@ impl State {
 }
 
 #[derive(Debug, Copy, Clone)]
+pub enum TeamPosition {
+    Home,
+    Away,
+}
+
+#[derive(Debug, Copy, Clone)]
 pub struct TeamPair<T> {
     pub home: T,
     pub away: T,
@@ -194,6 +200,26 @@ impl<T> TeamPair<T> {
         TeamPair {
             home: func(&self.home, &self.away),
             away: func(&self.away, &self.home),
+        }
+    }
+
+    pub fn map_pos<M, F>(self, mut func: F) -> TeamPair<M>
+    where
+        F: FnMut(T, TeamPosition) -> M,
+    {
+        TeamPair {
+            home: func(self.home, TeamPosition::Home),
+            away: func(self.away, TeamPosition::Away),
+        }
+    }
+
+    pub fn map_both_pos<M, F>(&self, mut func: F) -> TeamPair<M>
+    where
+        F: FnMut(&T, &T, TeamPosition) -> M,
+    {
+        TeamPair {
+            home: func(&self.home, &self.away, TeamPosition::Home),
+            away: func(&self.away, &self.home, TeamPosition::Away),
         }
     }
 
@@ -310,6 +336,7 @@ pub struct PitcherRef<'a> {
     pub state: &'a State,
     pub team: &'a Team,
     pub opponent: &'a Team,
+    pub team_pos: TeamPosition,
 }
 
 impl Game {
@@ -347,16 +374,19 @@ impl Game {
             self.pitcher_positions(state)?
                 .zip(self.pitcher_stats(state)?)
                 .zip(self.teams(state)?)
-                .map_both(|&((position, stats), team), &(_, opponent)| PitcherRef {
-                    id: &position.id,
-                    position,
-                    player: &position.data,
-                    stats,
-                    game: self,
-                    state,
-                    team,
-                    opponent,
-                }),
+                .map_both_pos(
+                    |&((position, stats), team), &(_, opponent), team_pos| PitcherRef {
+                        id: &position.id,
+                        position,
+                        player: &position.data,
+                        stats,
+                        game: self,
+                        state,
+                        team,
+                        opponent,
+                        team_pos,
+                    },
+                ),
         )
     }
 }
@@ -430,13 +460,18 @@ impl ScoredPitcher<'_> {
                 .iter()
                 .map(move |stat| lazy_format!(", {}", stat.print(self.pitcher))),
         );
+        let versus = match self.pitcher.team_pos {
+            TeamPosition::Home => "vs.",
+            TeamPosition::Away => "@",
+        };
         let knowledge = forbidden.forbid(lazy_format!(
-            "{strategy}: {name} ({score:.3}{stats}, **{team}** vs. {opponent})",
+            "{strategy}: {name} ({score:.3}{stats}, **{team}** {versus} {opponent})",
             strategy = strategy,
             name = self.pitcher.player.name,
             stats = printed_stats,
             score = self.score,
             team = self.pitcher.team.full_name,
+            versus = versus,
             opponent = self.pitcher.opponent.full_name
         ));
         lazy_format!("Best by {}", knowledge)
