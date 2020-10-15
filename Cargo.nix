@@ -23,31 +23,25 @@ rec {
   # "public" attributes that we attempt to keep stable with new versions of crate2nix.
   #
 
-  rootCrate = rec {
-    packageId = "idolizer";
-
-    # Use this attribute to refer to the derivation building your root crate package.
-    # You can override the features with rootCrate.build.override { features = [ "default" "feature1" ... ]; }.
-    build = internal.buildRustCrateWithFeatures {
-      inherit packageId;
-    };
-
-    # Debug support which might change between releases.
-    # File a bug if you depend on any for non-debug work!
-    debug = internal.debugCrate { inherit packageId; };
-  };
-  root_crate =
-    internal.deprecationWarning 
-      "root_crate is deprecated since crate2nix 0.4. Please use rootCrate instead." 
-      rootCrate.build;
+  
   # Refer your crate build derivation by name here.
   # You can override the features with
   # workspaceMembers."${crateName}".build.override { features = [ "default" "feature1" ... ]; }.
   workspaceMembers = {
-    "idolizer" = rec {
-      packageId = "idolizer";
+    "idol_bot" = rec {
+      packageId = "idol_bot";
       build = internal.buildRustCrateWithFeatures {
-        packageId = "idolizer";
+        packageId = "idol_bot";
+      };
+
+      # Debug support which might change between releases.
+      # File a bug if you depend on any for non-debug work!
+      debug = internal.debugCrate { inherit packageId; };
+    };
+    "idol_predictor" = rec {
+      packageId = "idol_predictor";
+      build = internal.buildRustCrateWithFeatures {
+        packageId = "idol_predictor";
       };
 
       # Debug support which might change between releases.
@@ -1227,14 +1221,69 @@ rec {
         ];
         
       };
-      "idolizer" = rec {
-        crateName = "idolizer";
+      "idol_bot" = rec {
+        crateName = "idol_bot";
         version = "0.1.0";
         edition = "2018";
         crateBin = [
-          { name = "idolizer"; path = "src/main.rs"; }
+          { name = "idol_bot"; path = "src/main.rs"; }
         ];
-        src = (builtins.filterSource sourceFilter ./.);
+        src = (builtins.filterSource sourceFilter ./idol_bot);
+        authors = [
+          "leo60228 <leo@60228.dev>"
+        ];
+        dependencies = [
+          {
+            name = "anyhow";
+            packageId = "anyhow";
+          }
+          {
+            name = "chrono";
+            packageId = "chrono";
+          }
+          {
+            name = "dotenv";
+            packageId = "dotenv";
+          }
+          {
+            name = "env_logger";
+            packageId = "env_logger";
+          }
+          {
+            name = "eventsource";
+            packageId = "eventsource";
+            features = [ "reqwest" ];
+          }
+          {
+            name = "idol_predictor";
+            packageId = "idol_predictor";
+          }
+          {
+            name = "log";
+            packageId = "log";
+          }
+          {
+            name = "reqwest";
+            packageId = "reqwest";
+            features = [ "json" ];
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+          }
+        ];
+        
+      };
+      "idol_predictor" = rec {
+        crateName = "idol_predictor";
+        version = "0.1.0";
+        edition = "2018";
+        src = (builtins.filterSource sourceFilter ./idol_predictor);
         authors = [
           "leo60228 <leo@60228.dev>"
         ];
@@ -1248,25 +1297,8 @@ rec {
             packageId = "average";
           }
           {
-            name = "chrono";
-            packageId = "chrono";
-          }
-          {
-            name = "dotenv";
-            packageId = "dotenv";
-          }
-          {
             name = "either";
             packageId = "either";
-          }
-          {
-            name = "env_logger";
-            packageId = "env_logger";
-          }
-          {
-            name = "eventsource";
-            packageId = "eventsource";
-            features = [ "reqwest" ];
           }
           {
             name = "join-lazy-fmt";
@@ -1289,10 +1321,6 @@ rec {
             name = "serde";
             packageId = "serde";
             features = [ "derive" ];
-          }
-          {
-            name = "serde_json";
-            packageId = "serde_json";
           }
           {
             name = "serde_with";

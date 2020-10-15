@@ -1,0 +1,19 @@
+[package]
+name = "idol_bot"
+version = "0.1.0"
+authors = ["leo60228 <leo@60228.dev>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+eventsource = { version = "0.6.0", git = "https://github.com/leo60228/eventsource.git", branch = "thiserror", features = ["reqwest"] }
+reqwest = { version = "0.10.8", features = ["json"] }
+anyhow = "1.0.33"
+serde = { version = "1.0.116", features = ["derive"] }
+serde_json = "1.0.59"
+chrono = "0.4.19"
+dotenv = "0.15.0"
+env_logger = "0.7.1"
+log = "0.4.11"
+idol_predictor = { path = "../idol_predictor" }

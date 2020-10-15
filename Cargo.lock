@@ -444,22 +444,33 @@ dependencies = [
 ]
 
 [[package]]
-name = "idolizer"
+name = "idol_bot"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dotenv",
+ "env_logger",
+ "eventsource",
+ "idol_predictor",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "idol_predictor"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "average",
- "chrono",
- "dotenv",
  "either",
- "env_logger",
- "eventsource",
  "join-lazy-fmt",
  "log",
  "noisy_float",
  "reqwest",
  "serde",
- "serde_json",
  "serde_with",
 ]
 

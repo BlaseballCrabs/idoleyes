@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use chrono::prelude::*;
 use eventsource::reqwest::Client;
-use idolizer::{algorithms, Event, State};
+use idol_predictor::{algorithms, Event, State};
 use log::*;
 use reqwest::Url;
 use serde::Serialize;
@@ -74,7 +74,7 @@ fn wait_for_next_game() {
 }
 
 fn logger() {
-    let default_filter = "idolizer";
+    let default_filter = "idol_predictor,idol_bot";
     let env = env_logger::Env::new().filter_or("RUST_LOG", default_filter);
     let mut builder = env_logger::Builder::from_env(env);
     builder.init();
