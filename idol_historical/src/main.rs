@@ -297,7 +297,7 @@ fn main() -> Result<()> {
     let mut ruthlessness = Vec::new();
     let mut stat_ratio = Vec::new();
 
-    for day in 1..99 {
+    for day in 0..99 {
         let predictor = state.state(base, day, &player_updates, &team_updates)?;
         let best_so9 = algorithms::SO9.best_pitcher(&predictor).ok();
         let best_ruthlessness = algorithms::RUTHLESSNESS.best_pitcher(&predictor).ok();
@@ -312,19 +312,21 @@ fn main() -> Result<()> {
                 Ok(x) => x,
                 Err(_) => continue,
             };
-            if let Some(ref best) = &best_so9 {
-                if best.pitcher.player.id == statsheet.player_id {
-                    so9.push(statsheet.strikeouts);
+            if day > 50 {
+                if let Some(ref best) = &best_so9 {
+                    if best.pitcher.player.id == statsheet.player_id {
+                        so9.push(statsheet.strikeouts);
+                    }
                 }
-            }
-            if let Some(ref best) = &best_ruthlessness {
-                if best.pitcher.player.id == statsheet.player_id {
-                    ruthlessness.push(statsheet.strikeouts);
+                if let Some(ref best) = &best_ruthlessness {
+                    if best.pitcher.player.id == statsheet.player_id {
+                        ruthlessness.push(statsheet.strikeouts);
+                    }
                 }
-            }
-            if let Some(ref best) = &best_stat_ratio {
-                if best.pitcher.player.id == statsheet.player_id {
-                    stat_ratio.push(statsheet.strikeouts);
+                if let Some(ref best) = &best_stat_ratio {
+                    if best.pitcher.player.id == statsheet.player_id {
+                        stat_ratio.push(statsheet.strikeouts);
+                    }
                 }
             }
             state.update(base, day, statsheet)?;

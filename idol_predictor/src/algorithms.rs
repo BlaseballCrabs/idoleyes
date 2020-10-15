@@ -26,13 +26,14 @@ pub const RUTHLESSNESS: Algorithm = Algorithm {
 pub fn best_by_stat_ratio(x: PitcherRef) -> Option<f64> {
     Some(
         x.stats.k_per_9
-            * x.opponent
-                .strikeouts(x.state)
-                .zip(x.opponent.at_bats(x.state))
-                .map(|(so, ab)| Some((so?, ab?)))
-                .map(|x| x.map(|(so, ab)| so as f64 / ab as f64))
-                .collect::<Option<Mean>>()?
-                .mean(),
+            * (0.2
+                + x.opponent
+                    .strikeouts(x.state)
+                    .zip(x.opponent.at_bats(x.state))
+                    .map(|(so, ab)| Some((so?, ab?)))
+                    .map(|x| x.map(|(so, ab)| so as f64 / ab as f64))
+                    .collect::<Option<Mean>>()?
+                    .mean()),
     )
 }
 
