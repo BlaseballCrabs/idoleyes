@@ -76,6 +76,28 @@ rec {
     #   inject test dependencies into the build
 
     crates = {
+      "aho-corasick" = rec {
+        crateName = "aho-corasick";
+        version = "0.7.14";
+        edition = "2015";
+        sha256 = "038x2d8n736llndrggi8pl8gk3yl66pbnp9r7mnhr2v70dqwwxml";
+        libName = "aho_corasick";
+        authors = [
+          "Andrew Gallant <jamslam@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "memchr";
+            packageId = "memchr";
+            usesDefaultFeatures = false;
+          }
+        ];
+        features = {
+          "default" = [ "std" ];
+          "std" = [ "memchr/use_std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "std" ];
+      };
       "anyhow" = rec {
         crateName = "anyhow";
         version = "1.0.33";
@@ -89,6 +111,35 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "std" ];
       };
+      "atty" = rec {
+        crateName = "atty";
+        version = "0.2.14";
+        edition = "2015";
+        sha256 = "1s7yslcs6a28c5vz7jwj63lkfgyx8mx99fdirlhi9lbhhzhrpcyr";
+        authors = [
+          "softprops <d.tangren@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "hermit-abi";
+            packageId = "hermit-abi";
+            target = { target, features }: (target."os" == "hermit");
+          }
+          {
+            name = "libc";
+            packageId = "libc";
+            usesDefaultFeatures = false;
+            target = { target, features }: target."unix";
+          }
+          {
+            name = "winapi";
+            packageId = "winapi 0.3.9";
+            target = { target, features }: target."windows";
+            features = [ "consoleapi" "processenv" "minwinbase" "minwindef" "winbase" ];
+          }
+        ];
+        
+      };
       "autocfg" = rec {
         crateName = "autocfg";
         version = "1.0.1";
@@ -98,6 +149,33 @@ rec {
           "Josh Stone <cuviper@gmail.com>"
         ];
         
+      };
+      "average" = rec {
+        crateName = "average";
+        version = "0.10.6";
+        edition = "2018";
+        sha256 = "1npcsgksxa8c03cam1zyxgaw9rsifwbzbflf4pjrq55b0a01cg1j";
+        authors = [
+          "Vinzent Steinberg <Vinzent.Steinberg@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "conv";
+            packageId = "conv";
+            usesDefaultFeatures = false;
+          }
+          {
+            name = "float-ord";
+            packageId = "float-ord";
+          }
+          {
+            name = "num-traits";
+            packageId = "num-traits";
+          }
+        ];
+        features = {
+          "serde1" = [ "serde" "serde_derive" "serde-big-array" ];
+        };
       };
       "base64" = rec {
         crateName = "base64";
@@ -223,6 +301,22 @@ rec {
         };
         resolvedDefaultFeatures = [ "clock" "default" "libc" "oldtime" "std" "time" "winapi" ];
       };
+      "conv" = rec {
+        crateName = "conv";
+        version = "0.3.3";
+        edition = "2015";
+        sha256 = "168j1npqrif1yqxbgbk0pdrx9shzhs5ylc5a4xw49b6hbxi11zvq";
+        authors = [
+          "Daniel Keep <daniel.keep@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "custom_derive";
+            packageId = "custom_derive";
+          }
+        ];
+        
+      };
       "core-foundation" = rec {
         crateName = "core-foundation";
         version = "0.7.0";
@@ -257,6 +351,18 @@ rec {
           "The Servo Project Developers"
         ];
         features = {
+        };
+      };
+      "custom_derive" = rec {
+        crateName = "custom_derive";
+        version = "0.1.7";
+        edition = "2015";
+        sha256 = "1f81bavw1wnykwh21hh4yyzigs6zl6f6pkk9p3car8kq95yfb2pg";
+        authors = [
+          "Daniel Keep <daniel.keep@gmail.com>"
+        ];
+        features = {
+          "default" = [ "std" ];
         };
       };
       "darling" = rec {
@@ -379,6 +485,19 @@ rec {
         ];
         
       };
+      "either" = rec {
+        crateName = "either";
+        version = "1.6.1";
+        edition = "2015";
+        sha256 = "0mwl9vngqf5jvrhmhn9x60kr5hivxyjxbmby2pybncxfqhf4z3g7";
+        authors = [
+          "bluss"
+        ];
+        features = {
+          "default" = [ "use_std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "use_std" ];
+      };
       "encoding_rs" = rec {
         crateName = "encoding_rs";
         version = "0.8.24";
@@ -397,6 +516,46 @@ rec {
           "fast-legacy-encode" = [ "fast-hangul-encode" "fast-hanja-encode" "fast-kanji-encode" "fast-gb-hanzi-encode" "fast-big5-hanzi-encode" ];
           "simd-accel" = [ "packed_simd" "packed_simd/into_bits" ];
         };
+      };
+      "env_logger" = rec {
+        crateName = "env_logger";
+        version = "0.7.1";
+        edition = "2018";
+        sha256 = "0djx8h8xfib43g5w94r1m1mkky5spcw4wblzgnhiyg5vnfxknls4";
+        authors = [
+          "The Rust Project Developers"
+        ];
+        dependencies = [
+          {
+            name = "atty";
+            packageId = "atty";
+            optional = true;
+          }
+          {
+            name = "humantime";
+            packageId = "humantime";
+            optional = true;
+          }
+          {
+            name = "log";
+            packageId = "log";
+            features = [ "std" ];
+          }
+          {
+            name = "regex";
+            packageId = "regex";
+            optional = true;
+          }
+          {
+            name = "termcolor";
+            packageId = "termcolor";
+            optional = true;
+          }
+        ];
+        features = {
+          "default" = [ "termcolor" "atty" "humantime" "regex" ];
+        };
+        resolvedDefaultFeatures = [ "atty" "default" "humantime" "regex" "termcolor" ];
       };
       "eventsource" = rec {
         crateName = "eventsource";
@@ -434,18 +593,15 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "reqwest" "thiserror" "with-reqwest" ];
       };
-      "fallible-iterator" = rec {
-        crateName = "fallible-iterator";
+      "float-ord" = rec {
+        crateName = "float-ord";
         version = "0.2.0";
-        edition = "2018";
-        sha256 = "1xq759lsr8gqss7hva42azn3whgrbrs2sd9xpn92c5ickxm1fhs4";
+        edition = "2015";
+        sha256 = "0kin50365sr3spnbscq43lksymybi99ai9rkqdw90m6vixhlibbv";
         authors = [
-          "Steven Fackler <sfackler@gmail.com>"
+          "Michael Howell <michael@notriddle.com>"
         ];
-        features = {
-          "default" = [ "std" ];
-        };
-        resolvedDefaultFeatures = [ "default" "std" ];
+        
       };
       "fnv" = rec {
         crateName = "fnv";
@@ -878,6 +1034,22 @@ rec {
         features = {
         };
       };
+      "humantime" = rec {
+        crateName = "humantime";
+        version = "1.3.0";
+        edition = "2015";
+        sha256 = "0krwgbf35pd46xvkqg14j070vircsndabahahlv3rwhflpy4q06z";
+        authors = [
+          "Paul Colomiets <paul@colomiets.name>"
+        ];
+        dependencies = [
+          {
+            name = "quick-error";
+            packageId = "quick-error";
+          }
+        ];
+        
+      };
       "hyper" = rec {
         crateName = "hyper";
         version = "0.13.8";
@@ -1072,6 +1244,10 @@ rec {
             packageId = "anyhow";
           }
           {
+            name = "average";
+            packageId = "average";
+          }
+          {
             name = "chrono";
             packageId = "chrono";
           }
@@ -1080,13 +1256,25 @@ rec {
             packageId = "dotenv";
           }
           {
+            name = "either";
+            packageId = "either";
+          }
+          {
+            name = "env_logger";
+            packageId = "env_logger";
+          }
+          {
             name = "eventsource";
             packageId = "eventsource";
             features = [ "reqwest" ];
           }
           {
-            name = "fallible-iterator";
-            packageId = "fallible-iterator";
+            name = "join-lazy-fmt";
+            packageId = "join-lazy-fmt";
+          }
+          {
+            name = "log";
+            packageId = "log";
           }
           {
             name = "noisy_float";
@@ -1180,6 +1368,18 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "std" ];
       };
+      "join-lazy-fmt" = rec {
+        crateName = "join-lazy-fmt";
+        version = "0.9.2";
+        edition = "2018";
+        sha256 = "1gq33nnzj0lcqs5l1y5bdykp41fypq7jj8585k7aba32yfx6c3z9";
+        authors = [
+          "Daniel Henry-Mantilla <daniel.henry.mantilla@gmail.com>"
+        ];
+        features = {
+        };
+        resolvedDefaultFeatures = [ "default" ];
+      };
       "js-sys" = rec {
         crateName = "js-sys";
         version = "0.3.45";
@@ -1263,6 +1463,7 @@ rec {
         features = {
           "kv_unstable_sval" = [ "kv_unstable" "sval/fmt" ];
         };
+        resolvedDefaultFeatures = [ "std" ];
       };
       "matches" = rec {
         crateName = "matches";
@@ -1288,7 +1489,7 @@ rec {
           "default" = [ "std" ];
           "use_std" = [ "std" ];
         };
-        resolvedDefaultFeatures = [ "default" "std" ];
+        resolvedDefaultFeatures = [ "default" "std" "use_std" ];
       };
       "mime" = rec {
         crateName = "mime";
@@ -1819,6 +2020,17 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "proc-macro" ];
       };
+      "quick-error" = rec {
+        crateName = "quick-error";
+        version = "1.2.3";
+        edition = "2015";
+        sha256 = "1q6za3v78hsspisc197bg3g7rpc989qycy8ypr8ap8igv10ikl51";
+        authors = [
+          "Paul Colomiets <paul@colomiets.name>"
+          "Colin Kiegel <kiegel@gmx.de>"
+        ];
+        
+      };
       "quote" = rec {
         crateName = "quote";
         version = "1.0.7";
@@ -1974,6 +2186,68 @@ rec {
           "Jeremy Soller <jackpot51@gmail.com>"
         ];
         
+      };
+      "regex" = rec {
+        crateName = "regex";
+        version = "1.4.1";
+        edition = "2015";
+        sha256 = "02w2xvrpjrn5mxix7j3x6qpwx0zdvnqb8hyyzzn4y1z3iidvhqw9";
+        authors = [
+          "The Rust Project Developers"
+        ];
+        dependencies = [
+          {
+            name = "aho-corasick";
+            packageId = "aho-corasick";
+            optional = true;
+          }
+          {
+            name = "memchr";
+            packageId = "memchr";
+            optional = true;
+          }
+          {
+            name = "regex-syntax";
+            packageId = "regex-syntax";
+            usesDefaultFeatures = false;
+          }
+          {
+            name = "thread_local";
+            packageId = "thread_local";
+            optional = true;
+          }
+        ];
+        features = {
+          "default" = [ "std" "perf" "unicode" "regex-syntax/default" ];
+          "perf" = [ "perf-cache" "perf-dfa" "perf-inline" "perf-literal" ];
+          "perf-cache" = [ "thread_local" ];
+          "perf-literal" = [ "aho-corasick" "memchr" ];
+          "unicode" = [ "unicode-age" "unicode-bool" "unicode-case" "unicode-gencat" "unicode-perl" "unicode-script" "unicode-segment" "regex-syntax/unicode" ];
+          "unicode-age" = [ "regex-syntax/unicode-age" ];
+          "unicode-bool" = [ "regex-syntax/unicode-bool" ];
+          "unicode-case" = [ "regex-syntax/unicode-case" ];
+          "unicode-gencat" = [ "regex-syntax/unicode-gencat" ];
+          "unicode-perl" = [ "regex-syntax/unicode-perl" ];
+          "unicode-script" = [ "regex-syntax/unicode-script" ];
+          "unicode-segment" = [ "regex-syntax/unicode-segment" ];
+          "unstable" = [ "pattern" ];
+          "use_std" = [ "std" ];
+        };
+        resolvedDefaultFeatures = [ "aho-corasick" "default" "memchr" "perf" "perf-cache" "perf-dfa" "perf-inline" "perf-literal" "std" "thread_local" "unicode" "unicode-age" "unicode-bool" "unicode-case" "unicode-gencat" "unicode-perl" "unicode-script" "unicode-segment" ];
+      };
+      "regex-syntax" = rec {
+        crateName = "regex-syntax";
+        version = "0.6.20";
+        edition = "2015";
+        sha256 = "076irs10yk2nlw7iyq0s7s22mqn4sfi6cxr60pjy3k8m9lv7mawc";
+        authors = [
+          "The Rust Project Developers"
+        ];
+        features = {
+          "default" = [ "unicode" ];
+          "unicode" = [ "unicode-age" "unicode-bool" "unicode-case" "unicode-gencat" "unicode-perl" "unicode-script" "unicode-segment" ];
+        };
+        resolvedDefaultFeatures = [ "default" "unicode" "unicode-age" "unicode-bool" "unicode-case" "unicode-gencat" "unicode-perl" "unicode-script" "unicode-segment" ];
       };
       "remove_dir_all" = rec {
         crateName = "remove_dir_all";
@@ -2592,6 +2866,23 @@ rec {
         ];
         
       };
+      "termcolor" = rec {
+        crateName = "termcolor";
+        version = "1.1.0";
+        edition = "2018";
+        sha256 = "0pyp8vc0gx7124y80ixdl6plbfn1yjhw04i875k5fz2dk8lglsxv";
+        authors = [
+          "Andrew Gallant <jamslam@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "winapi-util";
+            packageId = "winapi-util";
+            target = { target, features }: target."windows";
+          }
+        ];
+        
+      };
       "thiserror" = rec {
         crateName = "thiserror";
         version = "1.0.21";
@@ -2629,6 +2920,22 @@ rec {
           {
             name = "syn";
             packageId = "syn";
+          }
+        ];
+        
+      };
+      "thread_local" = rec {
+        crateName = "thread_local";
+        version = "1.0.1";
+        edition = "2015";
+        sha256 = "054vlrr1vsdy1h4b7n99mr24pnj8928ig9qwzg36wnkld4dns36l";
+        authors = [
+          "Amanieu d'Antras <amanieu@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "lazy_static";
+            packageId = "lazy_static";
           }
         ];
         
@@ -3730,7 +4037,7 @@ rec {
         features = {
           "debug" = [ "impl-debug" ];
         };
-        resolvedDefaultFeatures = [ "errhandlingapi" "fileapi" "handleapi" "impl-debug" "impl-default" "lmcons" "minschannel" "minwinbase" "minwindef" "ntdef" "profileapi" "schannel" "securitybaseapi" "sspi" "std" "sysinfoapi" "timezoneapi" "winbase" "wincrypt" "winerror" "winnt" "winreg" "winsock2" "ws2def" "ws2ipdef" "ws2tcpip" ];
+        resolvedDefaultFeatures = [ "consoleapi" "errhandlingapi" "fileapi" "handleapi" "impl-debug" "impl-default" "lmcons" "minschannel" "minwinbase" "minwindef" "ntdef" "processenv" "profileapi" "schannel" "securitybaseapi" "sspi" "std" "sysinfoapi" "timezoneapi" "winbase" "wincon" "wincrypt" "winerror" "winnt" "winreg" "winsock2" "ws2def" "ws2ipdef" "ws2tcpip" ];
       };
       "winapi-build" = rec {
         crateName = "winapi-build";
@@ -3750,6 +4057,24 @@ rec {
         sha256 = "1dmpa6mvcvzz16zg6d5vrfy4bxgg541wxrcip7cnshi06v38ffxc";
         authors = [
           "Peter Atashian <retep998@gmail.com>"
+        ];
+        
+      };
+      "winapi-util" = rec {
+        crateName = "winapi-util";
+        version = "0.1.5";
+        edition = "2018";
+        sha256 = "0y71bp7f6d536czj40dhqk0d55wfbbwqfp2ymqf1an5ibgl6rv3h";
+        authors = [
+          "Andrew Gallant <jamslam@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "winapi";
+            packageId = "winapi 0.3.9";
+            target = { target, features }: target."windows";
+            features = [ "std" "consoleapi" "errhandlingapi" "fileapi" "minwindef" "processenv" "winbase" "wincon" "winerror" "winnt" ];
+          }
         ];
         
       };
