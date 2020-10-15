@@ -1,5 +1,5 @@
 [package]
-name = "idol_predictor"
+name = "idol_api"
 version = "0.1.0"
 authors = ["leo60228 <leo@60228.dev>"]
 edition = "2018"
@@ -8,8 +8,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.33"
-noisy_float = "0.1.13"
-average = "0.10.6"
-either = "1.6.1"
-join-lazy-fmt = "0.9.2"
-idol_api = { path = "../idol_api" }
+reqwest = { version = "0.10.8", features = ["json"] }
+serde = { version = "1.0.116", features = ["derive"] }
+serde_with = "1.5.1"
+log = "0.4.11"

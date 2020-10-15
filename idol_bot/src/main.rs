@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Result};
 use chrono::prelude::*;
 use eventsource::reqwest::Client;
-use idol_predictor::{algorithms, Event, State};
+use idol_api::models::Event;
+use idol_api::State;
+use idol_predictor::algorithms;
 use log::*;
 use reqwest::Url;
 use serde::Serialize;
@@ -74,7 +76,7 @@ fn wait_for_next_game() {
 }
 
 fn logger() {
-    let default_filter = "idol_predictor,idol_bot";
+    let default_filter = "idol_api,idol_predictor,idol_bot";
     let env = env_logger::Env::new().filter_or("RUST_LOG", default_filter);
     let mut builder = env_logger::Builder::from_env(env);
     builder.init();

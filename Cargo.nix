@@ -28,6 +28,16 @@ rec {
   # You can override the features with
   # workspaceMembers."${crateName}".build.override { features = [ "default" "feature1" ... ]; }.
   workspaceMembers = {
+    "idol_api" = rec {
+      packageId = "idol_api";
+      build = internal.buildRustCrateWithFeatures {
+        packageId = "idol_api";
+      };
+
+      # Debug support which might change between releases.
+      # File a bug if you depend on any for non-debug work!
+      debug = internal.debugCrate { inherit packageId; };
+    };
     "idol_bot" = rec {
       packageId = "idol_bot";
       build = internal.buildRustCrateWithFeatures {
@@ -1221,6 +1231,40 @@ rec {
         ];
         
       };
+      "idol_api" = rec {
+        crateName = "idol_api";
+        version = "0.1.0";
+        edition = "2018";
+        src = (builtins.filterSource sourceFilter ./idol_api);
+        authors = [
+          "leo60228 <leo@60228.dev>"
+        ];
+        dependencies = [
+          {
+            name = "anyhow";
+            packageId = "anyhow";
+          }
+          {
+            name = "log";
+            packageId = "log";
+          }
+          {
+            name = "reqwest";
+            packageId = "reqwest";
+            features = [ "json" ];
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+          {
+            name = "serde_with";
+            packageId = "serde_with";
+          }
+        ];
+        
+      };
       "idol_bot" = rec {
         crateName = "idol_bot";
         version = "0.1.0";
@@ -1253,6 +1297,10 @@ rec {
             name = "eventsource";
             packageId = "eventsource";
             features = [ "reqwest" ];
+          }
+          {
+            name = "idol_api";
+            packageId = "idol_api";
           }
           {
             name = "idol_predictor";
@@ -1301,30 +1349,16 @@ rec {
             packageId = "either";
           }
           {
+            name = "idol_api";
+            packageId = "idol_api";
+          }
+          {
             name = "join-lazy-fmt";
             packageId = "join-lazy-fmt";
           }
           {
-            name = "log";
-            packageId = "log";
-          }
-          {
             name = "noisy_float";
             packageId = "noisy_float";
-          }
-          {
-            name = "reqwest";
-            packageId = "reqwest";
-            features = [ "json" ];
-          }
-          {
-            name = "serde";
-            packageId = "serde";
-            features = [ "derive" ];
-          }
-          {
-            name = "serde_with";
-            packageId = "serde_with";
           }
         ];
         

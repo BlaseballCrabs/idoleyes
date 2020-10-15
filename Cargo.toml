@@ -1,2 +1,2 @@
 [workspace]
-members = ["idol_predictor", "idol_bot"]
+members = ["idol_predictor", "idol_bot", "idol_api"]
