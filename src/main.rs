@@ -413,7 +413,7 @@ pub enum PrintedStat {
 impl PrintedStat {
     fn print(self, pitcher: PitcherRef) -> impl Display + '_ {
         match self {
-            Self::SO9 => lazy_format!("SO9: {}", pitcher.stats.k_per_9),
+            Self::SO9 => lazy_format!("SO/9: {}", pitcher.stats.k_per_9),
         }
     }
 }
