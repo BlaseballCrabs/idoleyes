@@ -153,6 +153,14 @@ algorithm!(WORST_STAT_RATIO, @ "Worst by (-SO/9)/(SO/AB)", [SO9], Unforbidden, |
                 .mean()
 });
 
+algorithm!(IDOLS, "idolization", [], Unforbiden, |x| {
+    -(x.state.idols.iter().position(|y| y.player_id == x.player.id).unwrap_or(0) as f64)
+});
+
+algorithm!(BATTING_STARS, "batting stars", [], Unforbiden, |x| (x.player.hitting_rating * 10.0) / 2.0);
+
+algorithm!(NAME_LENGTH, "name length", [], Unforbidden, |x| x.player.name.len() as f64);
+
 pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];
 
-pub const JOKE_ALGORITHMS: &[Algorithm] = &[BESTNESS, BEST_BEST, FRIDAYS, WORST_STAT_RATIO];
+pub const JOKE_ALGORITHMS: &[Algorithm] = &[BESTNESS, BEST_BEST, FRIDAYS, WORST_STAT_RATIO, IDOLS, BATTING_STARS, NAME_LENGTH];

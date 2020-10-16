@@ -1,4 +1,4 @@
-use super::models::{AtBatLeader, Event, Game, PitchingStats, Position, StrikeoutLeader, Team};
+use super::models::{AtBatLeader, Event, Game, PitchingStats, Position, StrikeoutLeader, Team, Idol};
 use anyhow::Result;
 use log::*;
 use serde::Deserialize;
@@ -11,6 +11,7 @@ pub struct State {
     pub teams: Vec<Team>,
     pub players: Vec<Position>,
     pub games: Vec<Game>,
+    pub idols: Vec<Idol>,
 }
 
 impl State {
@@ -64,6 +65,10 @@ impl State {
             .send()?
             .json::<Positions>()?
             .data;
+        let idols = client
+            .get("https://www.blaseball.com/api/getIdols")
+            .send()?
+            .json::<Vec<Idol>>()?;
         Ok(Self {
             strikeouts,
             at_bats,

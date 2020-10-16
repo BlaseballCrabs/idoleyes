@@ -31,6 +31,8 @@ pub struct Player {
     pub patheticism: f64,
     #[serde(default)]
     pub pitching_rating: f64,
+    #[serde(default)]
+    pub htting_rating: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,4 +96,10 @@ pub struct Team {
     pub bullpen: Vec<String>,
     pub bench: Vec<String>,
     pub perm_attr: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Idol {
+    pub player_id: String,
 }

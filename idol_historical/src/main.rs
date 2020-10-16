@@ -111,6 +111,7 @@ impl StatState {
             teams,
             players,
             games,
+            idols: vec![], // TODO
         })
     }
 }
