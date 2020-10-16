@@ -40,7 +40,7 @@ fn get_best() -> Result<Option<String>> {
     algorithms::RUTHLESSNESS.write_best_to(&state, &mut text)?;
     debug!("(SO/9)(SO/AB)");
     algorithms::STAT_RATIO.write_best_to(&state, &mut text)?;
-    write!(text, "**Smooth Strat**: See <#739584492364365974>");
+    write!(text, "**Smooth Strat**: See <#739591419152302190>");
     Ok(Some(text))
 }
 
