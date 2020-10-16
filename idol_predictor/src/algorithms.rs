@@ -1,4 +1,4 @@
-use super::{Algorithm, Forbidden::*, PitcherRef, PrintedStat};
+use super::{Algorithm, Forbidden::*, PitcherRef, PrintedStat, Strategy};
 use average::Mean;
 use paste::paste;
 
@@ -19,13 +19,17 @@ macro_rules! algorithm {
                 Some($strat)
             }
 
-            pub const $id: Algorithm = Algorithm {
-                name: $name,
-                forbidden: $forbidden,
-                printed_stats: &[$(PrintedStat::$stat),*],
-                strategy: [<best_by_ $id:lower>],
-            };
+            algorithm!($id, @ $name, [$($stat),*], $forbidden, Strategy::Maximize([<best_by_ $id:lower>]));
         }
+    };
+
+    ($id:ident, @ $name:expr, [$($stat:ident),*], $forbidden:ident, $strat:expr) => {
+        pub const $id: Algorithm = Algorithm {
+            name: $name,
+            forbidden: $forbidden,
+            printed_stats: &[$(PrintedStat::$stat),*],
+            strategy: $strat,
+        };
     };
 }
 

@@ -129,16 +129,25 @@ impl<'a> ScoredPitcher<'a> {
 }
 
 #[derive(Copy, Clone)]
+pub enum Strategy {
+    Maximize(fn(PitcherRef) -> Option<f64>),
+    Custom(fn(&State) -> Result<ScoredPitcher>),
+}
+
+#[derive(Copy, Clone)]
 pub struct Algorithm {
     pub name: &'static str,
     pub forbidden: Forbidden,
     pub printed_stats: &'static [PrintedStat],
-    pub strategy: fn(PitcherRef) -> Option<f64>,
+    pub strategy: Strategy,
 }
 
 impl Algorithm {
     pub fn best_pitcher(self, state: &State) -> Result<ScoredPitcher> {
-        ScoredPitcher::best_pitcher(state, self.strategy)
+        match self.strategy {
+            Strategy::Maximize(score) => ScoredPitcher::best_pitcher(state, score),
+            Strategy::Custom(strat) => strat(state),
+        }
     }
 
     pub fn display<'a, 'b>(self, scored: &'a ScoredPitcher<'b>) -> impl fmt::Display + 'a {
