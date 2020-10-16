@@ -40,3 +40,5 @@ algorithm!(STAT_RATIO, "(SO/9)(SO/AB)", [SO9], Unforbidden, |x| {
                 .collect::<Option<Mean>>()?
                 .mean())
 });
+
+pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];

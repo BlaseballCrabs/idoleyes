@@ -3,7 +3,7 @@ use chrono::prelude::*;
 use eventsource::reqwest::Client;
 use idol_api::models::Event;
 use idol_api::State;
-use idol_predictor::algorithms;
+use idol_predictor::algorithms::ALGORITHMS;
 use log::*;
 use reqwest::Url;
 use serde::Serialize;
@@ -34,12 +34,10 @@ fn get_best() -> Result<Option<String>> {
     let state = State::from_event(data)?;
     let mut text = String::new();
     writeln!(text, "**Day {}**", day + 2)?; // tomorrow, zero-indexed
-    debug!("SO/9");
-    algorithms::SO9.write_best_to(&state, &mut text)?;
-    debug!("Ruthlessness");
-    algorithms::RUTHLESSNESS.write_best_to(&state, &mut text)?;
-    debug!("(SO/9)(SO/AB)");
-    algorithms::STAT_RATIO.write_best_to(&state, &mut text)?;
+    for algorithm in ALGORITHMS {
+        debug!("{}", algorithm.name);
+        algorithm.write_best_to(&state, &mut text)?;
+    }
     write!(text, "**Smooth Strat**: See <#739591419152302190>")?;
     Ok(Some(text))
 }
