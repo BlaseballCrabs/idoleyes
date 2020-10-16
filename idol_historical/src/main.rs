@@ -168,6 +168,7 @@ pub fn players_at(player_updates: &[PlayerUpdate], time: DateTime<Utc>) -> Vec<P
                 .find(|y| y.data.id == x)
                 .map(|y| Position {
                     id: y.data.id.clone(),
+                    team_id: "".to_string(), // TODO
                     data: y.data.clone(),
                 })
         })

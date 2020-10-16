@@ -35,6 +35,8 @@ pub struct Player {
 #[serde(rename_all = "camelCase")]
 pub struct Position {
     pub id: String,
+    #[serde(with = "serde_with::rust::default_on_null")]
+    pub team_id: String,
     pub data: Player,
 }
 

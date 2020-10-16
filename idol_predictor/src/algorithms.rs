@@ -1,16 +1,19 @@
-use super::{Algorithm, Forbidden::*, PitcherRef, PrintedStat, Strategy};
+use super::{Algorithm, Forbidden::*, PitcherRef, PrintedStat, ScoredPitcher, Strategy::*};
+use anyhow::anyhow;
 use average::Mean;
+use idol_api::team_pair::TeamPosition;
+use noisy_float::prelude::*;
 use paste::paste;
 
 macro_rules! algorithm {
-    ($id:ident, _, [$($stat:ident),*], $forbidden:ident, |$x:ident| $strat:expr) => {
+    ($id:ident, _, [$($stat:ident),*], $forbidden:ident, $($strat:tt)*) => {
         paste! {
-            algorithm!($id, stringify!([<$id:lower>]), [$($stat),*], $forbidden, |$x| $strat);
+            algorithm!($id, stringify!([<$id:lower>]), [$($stat),*], $forbidden, $($strat)*);
         }
     };
 
-    ($id:ident, $name:expr, [$($stat:ident),*], $forbidden:ident, |$x:ident| $strat:expr) => {
-        algorithm!($id, @ concat!("Best by ", $name), [$($stat),*], $forbidden, |$x| $strat);
+    ($id:ident, $name:expr, [$($stat:ident),*], $forbidden:ident, $($strat:tt)*) => {
+        algorithm!($id, @ concat!("Best by ", $name), [$($stat),*], $forbidden, $($strat)*);
     };
 
     ($id:ident, @ $name:expr, [$($stat:ident),*], $forbidden:ident, |$x:ident| $strat:expr) => {
@@ -19,7 +22,7 @@ macro_rules! algorithm {
                 Some($strat)
             }
 
-            algorithm!($id, @ $name, [$($stat),*], $forbidden, Strategy::Maximize([<best_by_ $id:lower>]));
+            algorithm!($id, @ $name, [$($stat),*], $forbidden, Maximize([<best_by_ $id:lower>]));
         }
     };
 
@@ -33,12 +36,12 @@ macro_rules! algorithm {
     };
 }
 
-algorithm!(SO9, "SO/9", [], Unforbidden, |x| x.stats.k_per_9);
+algorithm!(SO9, "SO/9", [], Unforbidden, |x| x.stats?.k_per_9);
 
 algorithm!(RUTHLESSNESS, _, [SO9], Forbidden, |x| x.player.ruthlessness);
 
 algorithm!(STAT_RATIO, "(SO/9)(SO/AB)", [SO9], Unforbidden, |x| {
-    x.stats.k_per_9
+    x.stats?.k_per_9
         * (0.2
             + x.opponent
                 .strikeouts(x.state)
@@ -49,4 +52,55 @@ algorithm!(STAT_RATIO, "(SO/9)(SO/AB)", [SO9], Unforbidden, |x| {
                 .mean())
 });
 
-pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];
+algorithm!(
+    BESTNESS,
+    "Bestness",
+    [],
+    Unforbidden,
+    Custom(|state| {
+        let (position, score) = state
+            .players
+            .iter()
+            .map(|x| {
+                (
+                    x,
+                    if x.data.name.contains("Best") {
+                        4.0 / x.data.name.len() as f64
+                    } else {
+                        0.0
+                    },
+                )
+            })
+            .max_by_key(|x| n64(x.1))
+            .ok_or_else(|| anyhow!("No Best player!"))?;
+        let game = state
+            .games
+            .iter()
+            .find(|x| x.home_team == position.team_id || x.away_team == position.team_id)
+            .ok_or_else(|| anyhow!("No Crabs game!"))?;
+        let teams = game
+            .teams(state)
+            .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
+        let (team, opponent, team_pos) = if teams.away.id == position.team_id {
+            (teams.away, teams.home, TeamPosition::Away)
+        } else {
+            (teams.home, teams.away, TeamPosition::Home)
+        };
+        let id = &position.data.id;
+        let player = &position.data;
+        let pitcher = PitcherRef {
+            id,
+            position,
+            player,
+            stats: None,
+            game,
+            state,
+            team,
+            opponent,
+            team_pos,
+        };
+        Ok(ScoredPitcher { pitcher, score })
+    })
+);
+
+pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO, BESTNESS];

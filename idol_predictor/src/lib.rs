@@ -14,7 +14,7 @@ pub struct PitcherRef<'a> {
     pub id: &'a str,
     pub position: &'a Position,
     pub player: &'a Player,
-    pub stats: &'a PitchingStats,
+    pub stats: Option<&'a PitchingStats>,
     pub game: &'a Game,
     pub state: &'a State,
     pub team: &'a Team,
@@ -33,7 +33,7 @@ impl<'a> PitcherRef<'a> {
                         id: &position.id,
                         position,
                         player: &position.data,
-                        stats,
+                        stats: Some(stats),
                         game,
                         state,
                         team,
@@ -68,8 +68,9 @@ pub enum PrintedStat {
 
 impl PrintedStat {
     fn print(self, pitcher: PitcherRef) -> impl fmt::Display + '_ {
-        match self {
-            Self::SO9 => lazy_format!("SO/9: {}", pitcher.stats.k_per_9),
+        match (pitcher.stats, self) {
+            (Some(stats), Self::SO9) => Either::Left(lazy_format!("SO/9: {}", stats.k_per_9)),
+            (None, Self::SO9) => Either::Right("SO/9: N/A"),
         }
     }
 }

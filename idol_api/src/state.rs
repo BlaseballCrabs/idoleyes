@@ -60,7 +60,7 @@ impl State {
             .json()?;
         debug!("Getting players");
         let players = client
-            .get("https://api.sibr.dev/chronicler/v1/players")
+            .get("https://api.sibr.dev/chronicler/v1/players?forbidden=false")
             .send()?
             .json::<Positions>()?
             .data;
