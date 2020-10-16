@@ -10,13 +10,17 @@ macro_rules! algorithm {
     };
 
     ($id:ident, $name:expr, [$($stat:ident),*], $forbidden:ident, |$x:ident| $strat:expr) => {
+        algorithm!($id, @ concat!("Best by ", $name), [$($stat),*], $forbidden, |$x| $strat);
+    };
+
+    ($id:ident, @ $name:expr, [$($stat:ident),*], $forbidden:ident, |$x:ident| $strat:expr) => {
         paste! {
             pub fn [<best_by_ $id:lower>]($x: PitcherRef) -> Option<f64> {
                 Some($strat)
             }
 
             pub const $id: Algorithm = Algorithm {
-                name: concat!("Best by ", $name),
+                name: $name,
                 forbidden: $forbidden,
                 printed_stats: &[$(PrintedStat::$stat),*],
                 strategy: [<best_by_ $id:lower>],
