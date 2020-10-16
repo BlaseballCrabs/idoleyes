@@ -29,6 +29,8 @@ pub struct Player {
     pub name: String,
     pub ruthlessness: f64,
     pub patheticism: f64,
+    #[serde(default)]
+    pub pitching_rating: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
