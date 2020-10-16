@@ -32,7 +32,7 @@ pub struct Player {
     #[serde(default)]
     pub pitching_rating: f64,
     #[serde(default)]
-    pub htting_rating: f64,
+    pub hitting_rating: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

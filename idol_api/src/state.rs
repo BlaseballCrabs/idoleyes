@@ -1,4 +1,6 @@
-use super::models::{AtBatLeader, Event, Game, PitchingStats, Position, StrikeoutLeader, Team, Idol};
+use super::models::{
+    AtBatLeader, Event, Game, Idol, PitchingStats, Position, StrikeoutLeader, Team,
+};
 use anyhow::Result;
 use log::*;
 use serde::Deserialize;
@@ -76,6 +78,7 @@ impl State {
             teams,
             players,
             games,
+            idols,
         })
     }
 }
