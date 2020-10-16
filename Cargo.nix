@@ -1327,6 +1327,10 @@ rec {
             packageId = "log";
           }
           {
+            name = "rand";
+            packageId = "rand";
+          }
+          {
             name = "reqwest";
             packageId = "reqwest";
             features = [ "json" ];

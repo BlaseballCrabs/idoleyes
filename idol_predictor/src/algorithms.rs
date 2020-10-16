@@ -153,12 +153,6 @@ algorithm!(WORST_STAT_RATIO, @ "Worst by (-SO/9)/(SO/AB)", [SO9], Unforbidden, |
                 .mean()
 });
 
-pub const ALGORITHMS: &[Algorithm] = &[
-    SO9,
-    RUTHLESSNESS,
-    STAT_RATIO,
-    BESTNESS,
-    BEST_BEST,
-    FRIDAYS,
-    WORST_STAT_RATIO,
-];
+pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];
+
+pub const JOKE_ALGORITHMS: &[Algorithm] = &[BESTNESS, BEST_BEST, FRIDAYS, WORST_STAT_RATIO];

@@ -3,8 +3,9 @@ use chrono::prelude::*;
 use eventsource::reqwest::Client;
 use idol_api::models::Event;
 use idol_api::State;
-use idol_predictor::algorithms::ALGORITHMS;
+use idol_predictor::algorithms::{ALGORITHMS, JOKE_ALGORITHMS};
 use log::*;
+use rand::prelude::*;
 use reqwest::Url;
 use serde::Serialize;
 use std::fmt::Write;
@@ -38,6 +39,9 @@ fn get_best() -> Result<Option<String>> {
         debug!("{}", algorithm.name);
         algorithm.write_best_to(&state, &mut text)?;
     }
+    let joke = JOKE_ALGORITHMS.choose(&mut thread_rng()).unwrap();
+    debug!("Joke: {}", joke.name);
+    joke.write_best_to(&state, &mut text)?;
     write!(text, "**Smooth Strat**: See <#739591419152302190>")?;
     Ok(Some(text))
 }

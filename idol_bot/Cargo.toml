@@ -18,3 +18,4 @@ env_logger = "0.7.1"
 log = "0.4.11"
 idol_predictor = { path = "../idol_predictor" }
 idol_api = { path = "../idol_api" }
+rand = "0.7.3"

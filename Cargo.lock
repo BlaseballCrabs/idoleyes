@@ -467,6 +467,7 @@ dependencies = [
  "idol_api",
  "idol_predictor",
  "log",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",
