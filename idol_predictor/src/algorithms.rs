@@ -16,7 +16,7 @@ macro_rules! algorithm {
             }
 
             pub const $id: Algorithm = Algorithm {
-                name: $name,
+                name: concat!("Best by ", $name),
                 forbidden: $forbidden,
                 printed_stats: &[$(PrintedStat::$stat),*],
                 strategy: [<best_by_ $id:lower>],

@@ -115,7 +115,7 @@ impl<'a> ScoredPitcher<'a> {
             TeamPosition::Home => "vs.",
             TeamPosition::Away => "@",
         };
-        let knowledge = forbidden.forbid(lazy_format!(
+        forbidden.forbid(lazy_format!(
             "{strategy}: {name} ({score:.3}{stats}, **{team}** {versus} {opponent})",
             strategy = strategy,
             name = self.pitcher.player.name,
@@ -124,8 +124,7 @@ impl<'a> ScoredPitcher<'a> {
             team = self.pitcher.team.full_name,
             versus = versus,
             opponent = self.pitcher.opponent.full_name
-        ));
-        lazy_format!("Best by {}", knowledge)
+        ))
     }
 }
 
