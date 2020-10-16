@@ -1422,6 +1422,10 @@ rec {
             name = "noisy_float";
             packageId = "noisy_float";
           }
+          {
+            name = "paste";
+            packageId = "paste";
+          }
         ];
         
       };
@@ -2026,6 +2030,17 @@ rec {
         features = {
           "vendored" = [ "openssl-src" ];
         };
+      };
+      "paste" = rec {
+        crateName = "paste";
+        version = "1.0.1";
+        edition = "2018";
+        sha256 = "131wax27p3yw3x4xhy4r5limfawj0wasd4z0pcyn96fgshkay805";
+        procMacro = true;
+        authors = [
+          "David Tolnay <dtolnay@gmail.com>"
+        ];
+        
       };
       "percent-encoding" = rec {
         crateName = "percent-encoding";
