@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PitchingStats {
     pub player_id: String,
-    pub player_name: String,
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub k_per_9: f64,
 }
