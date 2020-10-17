@@ -69,7 +69,7 @@ algorithm!(
             .games
             .iter()
             .find(|x| x.home_team == position.team_id || x.away_team == position.team_id)
-            .ok_or_else(|| anyhow!("No Crabs game!"))?;
+            .ok_or_else(|| anyhow!("No Best game!"))?;
         let teams = game
             .teams(state)
             .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
@@ -112,7 +112,7 @@ algorithm!(
             .games
             .iter()
             .find(|x| x.home_team == position.team_id || x.away_team == position.team_id)
-            .ok_or_else(|| anyhow!("No Crabs game!"))?;
+            .ok_or_else(|| anyhow!("No Best game!"))?;
         let teams = game
             .teams(state)
             .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
