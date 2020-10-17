@@ -23,25 +23,73 @@ fn get_best(data: &Event) -> Result<String> {
     writeln!(text, "**Day {}**", day + 2)?; // tomorrow, zero-indexed
     for algorithm in ALGORITHMS {
         debug!("{}", algorithm.name);
-        algorithm.write_best_to(&state, &mut text)?;
+        match algorithm.write_best_to(&state, &mut text) {
+            Ok(_) => {
+                debug!("Succeeded");
+            }
+            Err(err) => {
+                warn!("Algorithm failed: {}", err);
+            }
+        }
     }
-    let joke = JOKE_ALGORITHMS.choose(&mut thread_rng()).unwrap();
-    debug!("Joke: {}", joke.name);
-    joke.write_best_to(&state, &mut text)?;
+    loop {
+        let joke = JOKE_ALGORITHMS.choose(&mut thread_rng()).unwrap();
+        debug!("Joke: {}", joke.name);
+        match joke.write_best_to(&state, &mut text) {
+            Ok(_) => {
+                debug!("Succeeded");
+                break;
+            }
+            Err(err) => {
+                warn!("Joke algorithm failed: {}", err);
+            }
+        }
+    }
     Ok(text)
 }
 
-fn send_hook(url: &str, data: &Event) -> Result<()> {
-    let content = get_best(data)?;
-    info!("{}", content);
-    debug!("Sending");
-    let hook = Webhook { content: &content };
+fn send_message(url: &str, content: &str) -> Result<()> {
+    let hook = Webhook { content };
     reqwest::blocking::Client::new()
         .post(url)
         .json(&hook)
         .send()?;
-    debug!("Sent");
     Ok(())
+}
+
+fn send_hook(url: &str, data: &Event, retry: bool) {
+    let content = match get_best(data) {
+        Ok(content) => content,
+        Err(err) => {
+            warn!("Failed to get message: {}", err);
+            if retry {
+                debug!("Retrying...");
+                send_hook(url, data, false);
+            } else {
+                debug!("Not retrying");
+            }
+            return;
+        }
+    };
+    info!("{}", content);
+    debug!("Sending");
+    match send_message(url, &content) {
+        Ok(_) => {
+            debug!("Sent");
+        }
+        Err(err) => {
+            warn!("Failed to send message: {}", err);
+            debug!("Retrying...");
+            match send_message(url, &content) {
+                Ok(_) => {
+                    debug!("Sent");
+                }
+                Err(err) => {
+                    error!("Failed to send twice, not retrying: {}", err);
+                }
+            }
+        }
+    }
 }
 
 fn wait_for_next_regular_season_game() {
@@ -67,39 +115,71 @@ fn logger() {
     builder.init();
 }
 
+fn next_event(client: &mut Client, url: &Url) -> Event {
+    loop {
+        debug!("Waiting for event");
+        match client.next() {
+            Some(Ok(event)) => {
+                debug!("Received event");
+                let data: Event = match serde_json::from_str(&event.data) {
+                    Ok(data) => {
+                        debug!("Parsed event");
+                        data
+                    }
+                    Err(err) => {
+                        error!("Couldn't parse event: {}", err);
+                        debug!("Reconnecting...");
+                        *client = Client::new(url.clone());
+                        continue;
+                    }
+                };
+                break data;
+            }
+            Some(Err(err)) => {
+                error!("Error receiving event: {}", err);
+                debug!("Reconnecting...");
+                *client = Client::new(url.clone());
+                continue;
+            }
+            None => {
+                warn!("Event stream ended");
+                debug!("Reconnecting...");
+                *client = Client::new(url.clone());
+                continue;
+            }
+        }
+    }
+}
+
 fn main() -> Result<()> {
     logger();
 
     let url = dotenv::var("WEBHOOK_URL")?;
+    let stream_url = Url::parse("https://www.blaseball.com/events/streamData")?;
 
-    let mut client =
-        Client::new(Url::parse("https://www.blaseball.com/events/streamData").unwrap());
+    let mut client = Client::new(stream_url.clone());
     debug!("Connected");
     loop {
-        debug!("Waiting for event");
-        let mut event = client.next().unwrap()?;
-        debug!("Parsing");
-        let mut data: Event = serde_json::from_str(&event.data)?;
+        let mut data = next_event(&mut client, &stream_url);
         debug!("Phase {}", data.value.games.sim.phase);
         match data.value.games.sim.phase {
             4 | 10 | 11 => {
                 debug!("Postseason");
                 if data.value.games.tomorrow_schedule.len() > 0 {
                     debug!("Betting allowed");
-                    send_hook(&url, &data)?;
+                    send_hook(&url, &data, true);
                 } else {
                     debug!("No betting");
                 }
                 while data.value.games.tomorrow_schedule.len() > 0 {
                     debug!("Waiting for games to start...");
-                    event = client.next().unwrap()?;
-                    data = serde_json::from_str(&event.data)?;
+                    data = next_event(&mut client, &stream_url);
                 }
                 debug!("Games in progress");
             }
             2 => {
                 debug!("Regular season");
-                send_hook(&url, &data)?;
+                send_hook(&url, &data, true);
                 wait_for_next_regular_season_game();
             }
             _ => {
