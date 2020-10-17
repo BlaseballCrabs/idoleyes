@@ -17,9 +17,9 @@ pub struct State {
 }
 
 impl State {
-    pub fn from_event(data: Event) -> Result<Self> {
+    pub fn from_event(data: &Event) -> Result<Self> {
         Self::from_games_and_season(
-            data.value.games.tomorrow_schedule,
+            data.value.games.tomorrow_schedule.clone(),
             data.value.games.sim.season,
         )
     }

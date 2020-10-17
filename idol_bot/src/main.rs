@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::prelude::*;
 use eventsource::reqwest::Client;
 use idol_api::models::Event;
@@ -15,21 +15,7 @@ pub struct Webhook<'a> {
     pub content: &'a str,
 }
 
-fn get_best() -> Result<Option<String>> {
-    let mut client =
-        Client::new(Url::parse("https://www.blaseball.com/events/streamData").unwrap());
-    debug!("Connected, waiting for event");
-    let event = client
-        .next()
-        .ok_or_else(|| anyhow!("Didn't get event!"))??;
-    drop(client);
-    debug!("Parsing");
-    let data: Event = serde_json::from_str(&event.data)?;
-    debug!("Phase {}", data.value.games.sim.phase);
-    if data.value.games.sim.phase != 2 {
-        debug!("Not regular season");
-        return Ok(None);
-    }
+fn get_best(data: &Event) -> Result<String> {
     let day = data.value.games.sim.day;
     debug!("Building state");
     let state = State::from_event(data)?;
@@ -42,15 +28,11 @@ fn get_best() -> Result<Option<String>> {
     let joke = JOKE_ALGORITHMS.choose(&mut thread_rng()).unwrap();
     debug!("Joke: {}", joke.name);
     joke.write_best_to(&state, &mut text)?;
-    write!(text, "**Smooth Strat**: See <#739591419152302190>")?;
-    Ok(Some(text))
+    Ok(text)
 }
 
-fn send_hook(url: &str) -> Result<()> {
-    let content = match get_best()? {
-        Some(x) => x,
-        None => return Ok(()),
-    };
+fn send_hook(url: &str, data: &Event) -> Result<()> {
+    let content = get_best(data)?;
     info!("{}", content);
     debug!("Sending");
     let hook = Webhook { content: &content };
@@ -62,7 +44,7 @@ fn send_hook(url: &str) -> Result<()> {
     Ok(())
 }
 
-fn wait_for_next_game() {
+fn wait_for_next_regular_season_game() {
     let now = Utc::now();
     let one_hour = chrono::Duration::hours(1);
     let later = now + one_hour;
@@ -90,8 +72,39 @@ fn main() -> Result<()> {
 
     let url = dotenv::var("WEBHOOK_URL")?;
 
+    let mut client =
+        Client::new(Url::parse("https://www.blaseball.com/events/streamData").unwrap());
+    debug!("Connected");
     loop {
-        send_hook(&url)?;
-        wait_for_next_game();
+        debug!("Waiting for event");
+        let mut event = client.next().unwrap()?;
+        debug!("Parsing");
+        let mut data: Event = serde_json::from_str(&event.data)?;
+        debug!("Phase {}", data.value.games.sim.phase);
+        match data.value.games.sim.phase {
+            4 | 10 | 11 => {
+                debug!("Postseason");
+                if data.value.games.tomorrow_schedule.len() > 0 {
+                    debug!("Betting allowed");
+                    send_hook(&url, &data)?;
+                } else {
+                    debug!("No betting");
+                }
+                while data.value.games.tomorrow_schedule.len() > 0 {
+                    debug!("Waiting for games to start...");
+                    event = client.next().unwrap()?;
+                    data = serde_json::from_str(&event.data)?;
+                }
+                debug!("Games in progress");
+            }
+            2 => {
+                debug!("Regular season");
+                send_hook(&url, &data)?;
+                wait_for_next_regular_season_game();
+            }
+            _ => {
+                debug!("Not season");
+            }
+        }
     }
 }
