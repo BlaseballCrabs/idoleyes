@@ -108,13 +108,6 @@ fn wait_for_next_regular_season_game() {
     std::thread::sleep(time_till_game.to_std().unwrap());
 }
 
-fn logger() {
-    let default_filter = "idol_api,idol_predictor,idol_bot";
-    let env = env_logger::Env::new().filter_or("RUST_LOG", default_filter);
-    let mut builder = env_logger::Builder::from_env(env);
-    builder.init();
-}
-
 fn next_event(client: &mut Client, url: &Url) -> Event {
     loop {
         debug!("Waiting for event");
@@ -151,8 +144,45 @@ fn next_event(client: &mut Client, url: &Url) -> Event {
     }
 }
 
+fn logger() -> Result<()> {
+    let syslog_fmt = syslog::Formatter3164 {
+        facility: syslog::Facility::LOG_USER,
+        hostname: None,
+        process: "idol_bot".to_owned(),
+        pid: std::process::id() as _,
+    };
+    let (syslog, syslog_err): (fern::Output, _) = match syslog::unix(syslog_fmt) {
+        Ok(syslog) => (syslog.into(), None),
+        Err(err) => (fern::Dispatch::new().into(), Some(err)),
+    };
+    fern::Dispatch::new()
+        .level(log::LevelFilter::Warn)
+        .level_for("idol_bot", log::LevelFilter::Trace)
+        .level_for("idol_predictor", log::LevelFilter::Trace)
+        .level_for("idol_api", log::LevelFilter::Trace)
+        .chain(
+            fern::Dispatch::new()
+                .format(move |out, message, record| {
+                    out.finish(format_args!(
+                        "[{} {} {}] {}",
+                        Utc::now().format("%Y-%m-%dT%H:%M:%SZ"),
+                        record.level(),
+                        record.target(),
+                        message
+                    ))
+                })
+                .chain(std::io::stdout()),
+        )
+        .chain(syslog)
+        .apply()?;
+    if let Some(err) = syslog_err {
+        warn!("Error setting up syslog: {}", err);
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
-    logger();
+    logger()?;
 
     let url = dotenv::var("WEBHOOK_URL")?;
     let stream_url = Url::parse("https://www.blaseball.com/events/streamData")?;

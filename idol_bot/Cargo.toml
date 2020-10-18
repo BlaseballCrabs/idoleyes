@@ -14,8 +14,9 @@ serde = { version = "1.0.116", features = ["derive"] }
 serde_json = "1.0.59"
 chrono = "0.4.19"
 dotenv = "0.15.0"
-env_logger = "0.7.1"
+fern = { version = "0.6.0", features = ["syslog-4"] }
 log = "0.4.11"
 idol_predictor = { path = "../idol_predictor" }
 idol_api = { path = "../idol_api" }
 rand = "0.7.3"
+syslog = "4.0.1"
