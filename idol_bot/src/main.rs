@@ -57,35 +57,42 @@ fn send_message(url: &str, content: &str) -> Result<()> {
     Ok(())
 }
 
-fn send_hook(url: &str, data: &Event, retry: bool) {
+fn send_hook(urls: &[&str], data: &Event, retry: bool, test_mode: bool) {
     let content = match get_best(data) {
         Ok(content) => content,
         Err(err) => {
             warn!("Failed to get message: {}", err);
             if retry {
                 debug!("Retrying...");
-                send_hook(url, data, false);
+                send_hook(urls, data, false, test_mode);
+                return;
+            } else if test_mode {
+                debug!("Sending test message");
+                "Error getting best idols, ignoring due to test mode".into()
             } else {
                 debug!("Not retrying");
+                return;
             }
-            return;
         }
     };
     info!("{}", content);
-    debug!("Sending");
-    match send_message(url, &content) {
-        Ok(_) => {
-            debug!("Sent");
-        }
-        Err(err) => {
-            warn!("Failed to send message: {}", err);
-            debug!("Retrying...");
-            match send_message(url, &content) {
-                Ok(_) => {
-                    debug!("Sent");
-                }
-                Err(err) => {
-                    error!("Failed to send twice, not retrying: {}", err);
+    debug!("Sending to {} webhooks", urls.len());
+    for (i, url) in urls.iter().enumerate() {
+        debug!("URL #{}", i + 1);
+        match send_message(url, &content) {
+            Ok(_) => {
+                debug!("Sent");
+            }
+            Err(err) => {
+                warn!("Failed to send message: {}", err);
+                debug!("Retrying...");
+                match send_message(url, &content) {
+                    Ok(_) => {
+                        debug!("Sent");
+                    }
+                    Err(err) => {
+                        error!("Failed to send twice, not retrying: {}", err);
+                    }
                 }
             }
         }
@@ -184,7 +191,12 @@ fn logger() -> Result<()> {
 fn main() -> Result<()> {
     logger()?;
 
-    let url = dotenv::var("WEBHOOK_URL")?;
+    let urls_raw = dotenv::var("WEBHOOK_URL")?;
+    let test_mode: usize = dotenv::var("TEST_MODE")
+        .ok()
+        .and_then(|x| x.parse().ok())
+        .unwrap_or(0);
+    let urls: Vec<&str> = urls_raw.split(",").collect();
     let stream_url = Url::parse("https://www.blaseball.com/events/streamData")?;
 
     let mut client = Client::new(stream_url.clone());
@@ -192,12 +204,17 @@ fn main() -> Result<()> {
     loop {
         let mut data = next_event(&mut client, &stream_url);
         debug!("Phase {}", data.value.games.sim.phase);
+        if test_mode != 0 {
+            info!("TESTING MODE");
+            send_hook(&urls, &data, false, true);
+            break;
+        }
         match data.value.games.sim.phase {
             4 | 10 | 11 => {
                 debug!("Postseason");
                 if data.value.games.tomorrow_schedule.len() > 0 {
                     debug!("Betting allowed");
-                    send_hook(&url, &data, true);
+                    send_hook(&urls, &data, true, false);
                 } else {
                     debug!("No betting");
                 }
@@ -209,7 +226,7 @@ fn main() -> Result<()> {
             }
             2 => {
                 debug!("Regular season");
-                send_hook(&url, &data, true);
+                send_hook(&urls, &data, true, false);
                 wait_for_next_regular_season_game();
             }
             _ => {
@@ -217,4 +234,6 @@ fn main() -> Result<()> {
             }
         }
     }
+
+    Ok(())
 }
