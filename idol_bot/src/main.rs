@@ -128,6 +128,7 @@ fn next_event(client: &mut Client, url: &Url) -> Event {
                     }
                     Err(err) => {
                         error!("Couldn't parse event: {}", err);
+                        std::thread::sleep(std::time::Duration::from_millis(5000));
                         debug!("Reconnecting...");
                         *client = Client::new(url.clone());
                         continue;
@@ -137,12 +138,14 @@ fn next_event(client: &mut Client, url: &Url) -> Event {
             }
             Some(Err(err)) => {
                 error!("Error receiving event: {}", err);
+                std::thread::sleep(std::time::Duration::from_millis(5000));
                 debug!("Reconnecting...");
                 *client = Client::new(url.clone());
                 continue;
             }
             None => {
                 warn!("Event stream ended");
+                std::thread::sleep(std::time::Duration::from_millis(5000));
                 debug!("Reconnecting...");
                 *client = Client::new(url.clone());
                 continue;
