@@ -32,7 +32,8 @@ impl State {
         let client = reqwest::blocking::Client::new();
         let comma_pitchers = games
             .iter()
-            .flat_map(Game::pitcher_ids)
+            .filter_map(Game::pitcher_ids)
+            .flatten()
             .collect::<Vec<&str>>()
             .join(",");
         debug!("Getting batter strikeouts");

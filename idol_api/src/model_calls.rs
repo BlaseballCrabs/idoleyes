@@ -3,11 +3,11 @@ use super::team_pair::TeamPair;
 use super::State;
 
 impl Game {
-    pub fn pitcher_ids(&self) -> TeamPair<&str> {
-        TeamPair {
-            home: &self.home_pitcher,
-            away: &self.away_pitcher,
-        }
+    pub fn pitcher_ids(&self) -> Option<TeamPair<&str>> {
+        Some(TeamPair {
+            home: &self.home_pitcher.as_ref()?,
+            away: &self.away_pitcher.as_ref()?,
+        })
     }
 
     pub fn team_ids(&self) -> TeamPair<&str> {
@@ -23,12 +23,12 @@ impl Game {
     }
 
     pub fn pitcher_positions<'a>(&self, state: &'a State) -> Option<TeamPair<&'a Position>> {
-        self.pitcher_ids()
+        self.pitcher_ids()?
             .and_then(|x| state.players.iter().find(|y| x == y.id))
     }
 
     pub fn pitcher_stats<'a>(&self, state: &'a State) -> Option<TeamPair<&'a PitchingStats>> {
-        self.pitcher_ids()
+        self.pitcher_ids()?
             .and_then(|x| state.pitcher_stats.iter().find(|y| x == y.player_id))
     }
 }

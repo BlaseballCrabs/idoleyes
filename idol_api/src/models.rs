@@ -47,10 +47,10 @@ pub struct Position {
 #[serde(rename_all = "camelCase")]
 pub struct Game {
     pub id: String,
-    pub away_pitcher: String,
-    pub away_pitcher_name: String,
-    pub home_pitcher: String,
-    pub home_pitcher_name: String,
+    pub away_pitcher: Option<String>,
+    pub away_pitcher_name: Option<String>,
+    pub home_pitcher: Option<String>,
+    pub home_pitcher_name: Option<String>,
     pub away_team: String,
     pub away_team_name: String,
     pub home_team: String,
