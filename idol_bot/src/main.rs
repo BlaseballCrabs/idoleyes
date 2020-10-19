@@ -104,7 +104,7 @@ fn wait_for_next_regular_season_game() {
     let one_hour = chrono::Duration::hours(1);
     let later = now + one_hour;
     let game = later
-        .with_minute(1)
+        .with_minute(2)
         .unwrap()
         .with_second(0)
         .unwrap()
