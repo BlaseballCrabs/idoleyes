@@ -161,9 +161,14 @@ fn logger() -> Result<()> {
         process: "idol_bot".to_owned(),
         pid: std::process::id() as _,
     };
-    let (syslog, syslog_err): (fern::Output, _) = match syslog::unix(syslog_fmt) {
-        Ok(syslog) => (syslog.into(), None),
-        Err(err) => (fern::Dispatch::new().into(), Some(err)),
+    let (syslog, syslog_err): (fern::Dispatch, _) = match syslog::unix(syslog_fmt) {
+        Ok(syslog) => (
+            fern::Dispatch::new()
+                .level(log::LevelFilter::Debug)
+                .chain(syslog),
+            None,
+        ),
+        Err(err) => (fern::Dispatch::new(), Some(err)),
     };
     fern::Dispatch::new()
         .level(log::LevelFilter::Warn)
