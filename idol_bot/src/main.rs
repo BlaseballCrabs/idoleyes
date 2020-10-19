@@ -99,22 +99,6 @@ fn send_hook(urls: &[&str], data: &Event, retry: bool, test_mode: bool) {
     }
 }
 
-fn wait_for_next_regular_season_game() {
-    let now = Utc::now();
-    let one_hour = chrono::Duration::hours(1);
-    let later = now + one_hour;
-    let game = later
-        .with_minute(2)
-        .unwrap()
-        .with_second(0)
-        .unwrap()
-        .with_nanosecond(0)
-        .unwrap();
-    let time_till_game = game - now;
-    debug!("Sleeping for {} (until {})", time_till_game, game);
-    std::thread::sleep(time_till_game.to_std().unwrap());
-}
-
 fn next_event(client: &mut Client, url: &Url) -> Event {
     loop {
         debug!("Waiting for event");
@@ -235,7 +219,11 @@ fn main() -> Result<()> {
             2 => {
                 debug!("Regular season");
                 send_hook(&urls, &data, true, false);
-                wait_for_next_regular_season_game();
+                let day = data.value.games.sim.day;
+                while data.value.games.sim.day == day {
+                    debug!("Waiting for next day...");
+                    data = next_event(&mut client, &stream_url);
+                }
             }
             _ => {
                 debug!("Not season");
