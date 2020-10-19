@@ -1,5 +1,5 @@
 use super::models::{Game, PitchingStats, Position, Team};
-use super::team_pair::TeamPair;
+use super::team_pair::{TeamPair, Transpose};
 use super::State;
 
 impl Game {
@@ -27,9 +27,10 @@ impl Game {
             .and_then(|x| state.players.iter().find(|y| x == y.id))
     }
 
-    pub fn pitcher_stats<'a>(&self, state: &'a State) -> Option<TeamPair<&'a PitchingStats>> {
-        self.pitcher_ids()?
-            .and_then(|x| state.pitcher_stats.iter().find(|y| x == y.player_id))
+    pub fn pitcher_stats<'a>(&self, state: &'a State) -> TeamPair<Option<&'a PitchingStats>> {
+        self.pitcher_ids()
+            .and_then(|x| x.and_then(|x| state.pitcher_stats.iter().find(|y| x == y.player_id)))
+            .transpose()
     }
 }
 

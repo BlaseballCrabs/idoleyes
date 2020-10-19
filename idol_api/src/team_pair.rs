@@ -167,3 +167,27 @@ impl<T, E> Transpose<Result<TeamPair<T>, E>> for TeamPair<Result<T, E>> {
         })
     }
 }
+
+impl<T> Transpose<TeamPair<Option<T>>> for Option<TeamPair<T>> {
+    fn transpose(self) -> TeamPair<Option<T>> {
+        match self {
+            Some(x) => x.map(Some),
+            None => TeamPair {
+                home: None,
+                away: None,
+            },
+        }
+    }
+}
+
+impl<T, E: Clone> Transpose<TeamPair<Result<T, E>>> for Result<TeamPair<T>, E> {
+    fn transpose(self) -> TeamPair<Result<T, E>> {
+        match self {
+            Ok(x) => x.map(Ok),
+            Err(x) => TeamPair {
+                home: Err(x.clone()),
+                away: Err(x),
+            },
+        }
+    }
+}

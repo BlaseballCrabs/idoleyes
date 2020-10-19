@@ -26,14 +26,14 @@ impl<'a> PitcherRef<'a> {
     pub fn pitchers(game: &'a Game, state: &'a State) -> Option<TeamPair<Self>> {
         Some(
             game.pitcher_positions(state)?
-                .zip(game.pitcher_stats(state)?)
+                .zip(game.pitcher_stats(state))
                 .zip(game.teams(state)?)
                 .map_both_pos(
                     |&((position, stats), team), &(_, opponent), team_pos| PitcherRef {
                         id: &position.id,
                         position,
                         player: &position.data,
-                        stats: Some(stats),
+                        stats,
                         game,
                         state,
                         team,
