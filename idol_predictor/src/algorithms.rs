@@ -138,9 +138,9 @@ algorithm!(
     })
 );
 
-const FRIDAYS_ID: &str = "979aee4a-6d80-4863-bf1c-ee1a78e06024";
+const LIFT_ID: &str = "c73b705c-40ad-4633-a6ed-d357ee2e2bcf";
 
-algorithm!(FRIDAYS, @ "Against Fridays", [], Unforbidden, |x| if x.opponent.id == FRIDAYS_ID { 1.0 } else { 0.0 });
+algorithm!(LIFT, @ "Against Lift", [], Unforbidden, |x| if x.opponent.id == LIFT_ID { 1.0 } else { 0.0 });
 
 algorithm!(WORST_STAT_RATIO, @ "Worst by (-SO/9)/(SO/AB)", [SO9], Unforbidden, |x| {
     -x.stats?.k_per_9
@@ -175,7 +175,7 @@ pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];
 pub const JOKE_ALGORITHMS: &[Algorithm] = &[
     BESTNESS,
     BEST_BEST,
-    FRIDAYS,
+    LIFT,
     WORST_STAT_RATIO,
     IDOLS,
     BATTING_STARS,
