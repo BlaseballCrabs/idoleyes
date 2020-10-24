@@ -10,6 +10,13 @@ impl Game {
         })
     }
 
+    pub fn pitcher_names(&self) -> Option<TeamPair<&str>> {
+        Some(TeamPair {
+            home: self.home_pitcher_name.as_deref()?,
+            away: self.away_pitcher_name.as_deref()?,
+        })
+    }
+
     pub fn team_ids(&self) -> TeamPair<&str> {
         TeamPair {
             home: &self.home_team,

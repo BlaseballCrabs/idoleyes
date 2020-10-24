@@ -185,6 +185,55 @@ algorithm!(GAMES_PER_GAME, "games per game", [], Unforbidden, |x| {
     games as f64 / normal_games as f64
 });
 
+algorithm!(
+    GAMES_NAME_PER_GAME,
+    "Games per game",
+    [],
+    Unforbidden,
+    Custom(|state| {
+        let game = state
+            .games
+            .iter()
+            .find(|x| {
+                x.pitcher_names()
+                    .map(|y| y.any(|z| z.contains("Games")))
+                    .unwrap_or(false)
+            })
+            .ok_or_else(|| anyhow!("No Games game!"))?;
+        let position = game
+            .pitcher_positions(state)
+            .into_iter()
+            .flatten()
+            .find(|x| x.data.name.contains("Games"))
+            .ok_or_else(|| anyhow!("Lost the Games!"))?;
+        let teams = game
+            .teams(state)
+            .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
+        let (team, opponent, team_pos) = if teams.away.id == position.team_id {
+            (teams.away, teams.home, TeamPosition::Away)
+        } else {
+            (teams.home, teams.away, TeamPosition::Home)
+        };
+        let id = &position.data.id;
+        let player = &position.data;
+        let pitcher = PitcherRef {
+            id,
+            position,
+            player,
+            stats: None,
+            game,
+            state,
+            team,
+            opponent,
+            team_pos,
+        };
+        Ok(ScoredPitcher {
+            pitcher,
+            score: 1.0,
+        })
+    })
+);
+
 pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];
 
 pub const JOKE_ALGORITHMS: &[Algorithm] = &[
@@ -196,4 +245,5 @@ pub const JOKE_ALGORITHMS: &[Algorithm] = &[
     BATTING_STARS,
     NAME_LENGTH,
     GAMES_PER_GAME,
+    GAMES_NAME_PER_GAME,
 ];
