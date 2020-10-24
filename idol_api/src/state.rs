@@ -1,5 +1,6 @@
 use super::models::{
-    AtBatLeader, Event, Game, Idol, PitchingStats, Position, StrikeoutLeader, Team,
+    AtBatLeader, Event, Game, GameUpdate, GameUpdates, Idol, PitchingStats, Position,
+    StrikeoutLeader, Team,
 };
 use anyhow::Result;
 use log::*;
@@ -14,14 +15,19 @@ pub struct State {
     pub players: Vec<Position>,
     pub games: Vec<Game>,
     pub idols: Vec<Idol>,
+    pub black_hole_sun_2: Vec<GameUpdate>,
+    pub season: usize,
 }
 
 impl State {
     pub fn from_event(data: &Event) -> Result<Self> {
-        Self::from_games_and_season(
-            data.value.games.tomorrow_schedule.clone(),
-            data.value.games.sim.season,
-        )
+        let games = if data.value.games.tomorrow_schedule.len() == 0 {
+            warn!("No games scheduled, checking current games");
+            data.value.games.schedule.clone()
+        } else {
+            data.value.games.tomorrow_schedule.clone()
+        };
+        Self::from_games_and_season(games, data.value.games.sim.season)
     }
 
     pub fn from_games_and_season(games: Vec<Game>, season: usize) -> Result<Self> {
@@ -68,6 +74,12 @@ impl State {
             .send()?
             .json::<Positions>()?
             .data;
+        debug!("Getting Sun 2 and Black Hole events");
+        let black_hole_sun_2 = client
+            .get("https://api.sibr.dev/chronicler/v1/games/updates?search=%22Sun%202%22%20or%20%22Black%20Hole%22&count=1000&order=desc")
+            .send()?
+            .json::<GameUpdates>()?
+            .data;
         let idols = client
             .get("https://www.blaseball.com/api/getIdols")
             .send()?
@@ -80,6 +92,8 @@ impl State {
             players,
             games,
             idols,
+            black_hole_sun_2,
+            season,
         })
     }
 }

@@ -170,6 +170,21 @@ algorithm!(NAME_LENGTH, "name length", [], Unforbidden, |x| {
     x.player.name.len() as f64
 });
 
+algorithm!(GAMES_PER_GAME, "games per game", [], Unforbidden, |x| {
+    let normal_games = x.stats?.games;
+    let extra = x
+        .state
+        .black_hole_sun_2
+        .iter()
+        .map(|y| &y.data)
+        .take_while(|y| y.season == x.state.season)
+        .filter_map(|y| y.pitcher_ids())
+        .filter(|y| y.any(|z| z == x.id))
+        .count();
+    let games = normal_games + extra;
+    games as f64 / normal_games as f64
+});
+
 pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];
 
 pub const JOKE_ALGORITHMS: &[Algorithm] = &[
@@ -180,4 +195,5 @@ pub const JOKE_ALGORITHMS: &[Algorithm] = &[
     IDOLS,
     BATTING_STARS,
     NAME_LENGTH,
+    GAMES_PER_GAME,
 ];

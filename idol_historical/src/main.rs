@@ -89,6 +89,7 @@ impl StatState {
             .map(|x| PitchingStats {
                 player_id: x.0.clone(),
                 k_per_9: (x.1.strikeouts * 9) as f64 / x.1.innings_pitched as f64,
+                games: 0,
             })
             .collect();
         let mut games = Vec::new();
@@ -110,7 +111,9 @@ impl StatState {
             teams,
             players,
             games,
-            idols: vec![], // TODO
+            idols: vec![],            // TODO
+            black_hole_sun_2: vec![], // TODO
+            season: 0,                // TODO
         })
     }
 }

@@ -5,6 +5,8 @@ pub struct PitchingStats {
     pub player_id: String,
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub k_per_9: f64,
+    #[serde(with = "serde_with::rust::display_fromstr")]
+    pub games: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,6 +60,7 @@ pub struct Game {
     pub away_odds: f64,
     pub home_odds: f64,
     pub inning: usize,
+    pub season: usize,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -72,6 +75,7 @@ pub struct Simulation {
 #[serde(rename_all = "camelCase")]
 pub struct Games {
     pub sim: Simulation,
+    pub schedule: Vec<Game>,
     pub tomorrow_schedule: Vec<Game>,
 }
 
@@ -101,4 +105,17 @@ pub struct Team {
 #[serde(rename_all = "camelCase")]
 pub struct Idol {
     pub player_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameUpdates {
+    pub next_page: String,
+    pub data: Vec<GameUpdate>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameUpdate {
+    pub data: Game,
 }

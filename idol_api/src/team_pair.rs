@@ -65,6 +65,13 @@ impl<T> TeamPair<T> {
         }
     }
 
+    pub fn any<F>(self, mut func: F) -> bool
+    where
+        F: FnMut(T) -> bool,
+    {
+        func(self.home) || func(self.away)
+    }
+
     pub fn as_ref(&self) -> TeamPair<&T> {
         TeamPair {
             home: &self.home,
