@@ -21,7 +21,7 @@ pub struct State {
 
 impl State {
     pub fn from_event(data: &Event) -> Result<Self> {
-        let games = if data.value.games.tomorrow_schedule.len() == 0 {
+        let games = if data.value.games.tomorrow_schedule.is_empty() {
             warn!("No games scheduled, checking current games");
             data.value.games.schedule.clone()
         } else {

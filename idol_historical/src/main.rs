@@ -243,7 +243,7 @@ pub fn teams_at(team_updates: &[TeamUpdate], time: DateTime<Utc>) -> Vec<Team> {
 fn print_strikeouts(strat: &str, mut strikeouts: Vec<usize>) {
     println!("--- {} ---", strat);
     println!("strikeouts: {:?}", strikeouts);
-    strikeouts.sort();
+    strikeouts.sort_unstable();
     println!(
         "mean: {}",
         strikeouts.iter().sum::<usize>() as f64 / strikeouts.len() as f64
@@ -251,7 +251,7 @@ fn print_strikeouts(strat: &str, mut strikeouts: Vec<usize>) {
     println!("worst: {}", strikeouts[0]);
     println!("best: {}", strikeouts.last().unwrap());
     println!("median: {}", strikeouts[strikeouts.len() / 2]);
-    println!("");
+    println!();
 }
 
 fn main() -> Result<()> {

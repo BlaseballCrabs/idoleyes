@@ -188,7 +188,7 @@ fn main() -> Result<()> {
         .ok()
         .and_then(|x| x.parse().ok())
         .unwrap_or(0);
-    let urls: Vec<&str> = urls_raw.split(",").collect();
+    let urls: Vec<&str> = urls_raw.split(',').collect();
     let stream_url = Url::parse("https://www.blaseball.com/events/streamData")?;
 
     let mut client = Client::new(stream_url.clone());
@@ -204,13 +204,13 @@ fn main() -> Result<()> {
         match data.value.games.sim.phase {
             4 | 10 | 11 => {
                 debug!("Postseason");
-                if data.value.games.tomorrow_schedule.len() > 0 {
+                if !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Betting allowed");
                     send_hook(&urls, &data, true, false);
                 } else {
                     debug!("No betting");
                 }
-                while data.value.games.tomorrow_schedule.len() > 0 {
+                while !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Waiting for games to start...");
                     data = next_event(&mut client, &stream_url);
                 }
