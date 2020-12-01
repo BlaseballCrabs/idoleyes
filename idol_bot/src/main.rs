@@ -13,6 +13,7 @@ use std::fmt::Write;
 #[derive(Debug, Serialize)]
 pub struct Webhook<'a> {
     pub content: &'a str,
+    pub avatar_url: &'static str,
 }
 
 fn get_best(data: &Event) -> Result<String> {
@@ -49,7 +50,10 @@ fn get_best(data: &Event) -> Result<String> {
 }
 
 fn send_message(url: &str, content: &str) -> Result<()> {
-    let hook = Webhook { content };
+    let hook = Webhook {
+        content,
+        avatar_url: "http://hs.hiveswap.com/ezodiac/images/aspect_7.png",
+    };
     reqwest::blocking::Client::new()
         .post(url)
         .json(&hook)
