@@ -202,7 +202,7 @@ fn main() -> Result<()> {
             break;
         }
         match data.value.games.sim.phase {
-            4 | 10 | 11 => {
+            4 | 10 | 11 | 13 | 14 => {
                 debug!("Postseason");
                 if !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Betting allowed");
