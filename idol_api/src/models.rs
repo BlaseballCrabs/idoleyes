@@ -59,14 +59,14 @@ pub struct Game {
     pub home_team_name: String,
     pub away_odds: f64,
     pub home_odds: f64,
-    pub inning: usize,
-    pub season: usize,
+    pub inning: isize,
+    pub season: isize,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Simulation {
-    pub season: usize,
+    pub season: isize,
     pub day: usize,
     pub phase: usize,
 }

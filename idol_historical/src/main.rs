@@ -69,7 +69,7 @@ impl StatState {
                 .entry(statsheet.player_id.clone())
                 .or_default();
             data.strikeouts += statsheet.strikeouts;
-            data.innings_pitched += game.inning + 1;
+            data.innings_pitched += (game.inning + 1) as usize;
         }
         Ok(())
     }

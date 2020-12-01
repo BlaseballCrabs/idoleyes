@@ -16,7 +16,7 @@ pub struct State {
     pub games: Vec<Game>,
     pub idols: Vec<Idol>,
     pub black_hole_sun_2: Vec<GameUpdate>,
-    pub season: usize,
+    pub season: isize,
 }
 
 impl State {
@@ -30,7 +30,7 @@ impl State {
         Self::from_games_and_season(games, data.value.games.sim.season)
     }
 
-    pub fn from_games_and_season(games: Vec<Game>, season: usize) -> Result<Self> {
+    pub fn from_games_and_season(games: Vec<Game>, season: isize) -> Result<Self> {
         #[derive(Deserialize)]
         struct Positions {
             data: Vec<Position>,
