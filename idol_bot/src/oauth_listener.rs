@@ -23,6 +23,7 @@ pub fn listen(db: &Database, oauth: OAuth) -> impl Future<Output = Result<()>> {
         let state = State { db, oauth };
 
         let mut app = tide::with_state(state);
+        app.at("/").get(auth);
         app.at("/redirect").get(redirect);
         app.listen("0.0.0.0:4130").await?;
 
@@ -52,6 +53,17 @@ struct WebhookResponse {
 #[derive(Deserialize)]
 struct TokenResponse {
     webhook: WebhookResponse,
+}
+
+async fn auth(req: Request<State>) -> tide::Result {
+    let state = req.state();
+    let mut url = http_types::Url::parse("https://discord.com/api/oauth2/authorize").unwrap();
+    url.query_pairs_mut()
+        .append_pair("client_id", &state.oauth.client_id)
+        .append_pair("redirect_uri", &state.oauth.redirect_uri)
+        .append_pair("response_type", "code")
+        .append_pair("scope", "webhook.incoming");
+    Ok(tide::Redirect::new(url).into())
 }
 
 async fn redirect(req: Request<State>) -> tide::Result {
