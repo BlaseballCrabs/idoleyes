@@ -42,4 +42,9 @@ impl Database {
         transaction.commit().await?;
         Ok(())
     }
+
+    pub async fn add_url(&self, url: &str) -> Result<()> {
+        self.add_urls(std::iter::once(url)).await?;
+        Ok(())
+    }
 }

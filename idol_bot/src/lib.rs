@@ -13,6 +13,7 @@ use std::pin::Pin;
 pub mod db;
 pub mod events;
 pub mod logger;
+pub mod oauth_listener;
 
 #[derive(Debug, Serialize)]
 pub struct Webhook<'a> {

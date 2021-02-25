@@ -23,6 +23,7 @@ pub fn init() -> Result<()> {
         .level_for("idol_bot", log::LevelFilter::Trace)
         .level_for("idol_predictor", log::LevelFilter::Trace)
         .level_for("idol_api", log::LevelFilter::Trace)
+        .level_for("tide", log::LevelFilter::Info)
         .chain(
             fern::Dispatch::new()
                 .format(move |out, message, record| {
