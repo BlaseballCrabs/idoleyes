@@ -1,6 +1,6 @@
 use anyhow::{bail, ensure, Result};
 use async_std::prelude::*;
-use db::Database;
+use db::{Database, Webhook};
 use idol_api::models::Event;
 use idol_api::State;
 use idol_predictor::algorithms::{ALGORITHMS, JOKE_ALGORITHMS};
@@ -16,7 +16,7 @@ pub mod logger;
 pub mod oauth_listener;
 
 #[derive(Debug, Serialize)]
-pub struct Webhook<'a> {
+pub struct WebhookPayload<'a> {
     pub content: &'a str,
     pub avatar_url: &'static str,
 }
@@ -55,7 +55,7 @@ async fn get_best(data: &Event) -> Result<String> {
 }
 
 async fn send_message(db: &Database, url: &str, content: &str) -> Result<()> {
-    let hook = Webhook {
+    let hook = WebhookPayload {
         content,
         avatar_url: "http://hs.hiveswap.com/ezodiac/images/aspect_7.png",
     };
@@ -101,9 +101,9 @@ pub fn send_hook<'a>(
         };
         info!("{}", content);
         debug!("Sending to {} webhooks", db.count().await?);
-        let mut urls = db.urls().enumerate();
-        while let Some((i, url)) = urls.next().await {
-            let url = url?;
+        let mut webhooks = db.webhooks().enumerate();
+        while let Some((i, webhook)) = webhooks.next().await {
+            let Webhook { url } = webhook?;
 
             debug!("URL #{}", i + 1);
             match send_message(&db, &url, &content).await {

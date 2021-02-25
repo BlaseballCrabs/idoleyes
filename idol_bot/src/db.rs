@@ -8,6 +8,10 @@ pub struct Database {
     pool: SqlitePool,
 }
 
+pub struct Webhook {
+    pub url: String,
+}
+
 impl Database {
     pub async fn connect(uri: &str) -> Result<Self> {
         let pool = SqlitePoolOptions::new().connect(uri).await?;
@@ -18,10 +22,10 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub fn urls(&self) -> impl Stream<Item = Result<String>> + '_ {
-        sqlx::query!("SELECT url FROM webhooks")
+    pub fn webhooks(&self) -> impl Stream<Item = Result<Webhook>> + '_ {
+        sqlx::query_as!(Webhook, "SELECT url FROM webhooks")
             .fetch(&self.pool)
-            .map(|x| Ok(x?.url))
+            .map(|x| Ok(x?))
     }
 
     pub async fn count(&self) -> Result<i32> {
