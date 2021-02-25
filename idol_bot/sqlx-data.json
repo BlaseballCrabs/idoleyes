@@ -45,5 +45,15 @@
         false
       ]
     }
+  },
+  "a043fd4969b146748774f19e71cc1333d0003403922cb13004c7449c0a807bfe": {
+    "query": "DELETE FROM webhooks WHERE url = ?",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
   }
 }

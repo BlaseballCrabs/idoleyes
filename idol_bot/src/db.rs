@@ -47,4 +47,11 @@ impl Database {
         self.add_urls(std::iter::once(url)).await?;
         Ok(())
     }
+
+    pub async fn remove_url(&self, url: &str) -> Result<()> {
+        sqlx::query!("DELETE FROM webhooks WHERE url = ?", url)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
 }

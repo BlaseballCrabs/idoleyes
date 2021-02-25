@@ -54,7 +54,7 @@ async fn get_best(data: &Event) -> Result<String> {
     Ok(text)
 }
 
-async fn send_message(url: &str, content: &str) -> Result<()> {
+async fn send_message(db: &Database, url: &str, content: &str) -> Result<()> {
     let hook = Webhook {
         content,
         avatar_url: "http://hs.hiveswap.com/ezodiac/images/aspect_7.png",
@@ -65,7 +65,14 @@ async fn send_message(url: &str, content: &str) -> Result<()> {
         .await
         .map_err(|x| x.into_inner())?
         .status();
-    ensure!(status.is_success(), "Couldn't send webhook: {}", status);
+
+    if status == surf::StatusCode::NotFound {
+        debug!("webhook removed, deleting from database");
+        db.remove_url(url).await?;
+    } else {
+        ensure!(status.is_success(), "Couldn't send webhook: {}", status);
+    }
+
     Ok(())
 }
 
@@ -99,14 +106,14 @@ pub fn send_hook<'a>(
             let url = url?;
 
             debug!("URL #{}", i + 1);
-            match send_message(&url, &content).await {
+            match send_message(&db, &url, &content).await {
                 Ok(_) => {
                     debug!("Sent");
                 }
                 Err(err) => {
                     warn!("Failed to send message: {}", err);
                     debug!("Retrying...");
-                    match send_message(&url, &content).await {
+                    match send_message(&db, &url, &content).await {
                         Ok(_) => {
                             debug!("Sent");
                         }
