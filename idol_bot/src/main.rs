@@ -29,11 +29,11 @@ async fn main() -> Result<()> {
     )
     .await?;
 
-    let mut client = sse_connect(stream_url).await?;
+    let mut client = events::sse_connect(stream_url).await?;
     debug!("Connected to Blaseball");
 
     loop {
-        let mut data = next_event(&mut client, &stream_url).await?;
+        let mut data = events::next_event(&mut client, &stream_url).await?;
         debug!("Phase {}", data.value.games.sim.phase);
         if test_mode != 0 {
             info!("TESTING MODE");
@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
                 }
                 while !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Waiting for games to start...");
-                    data = next_event(&mut client, &stream_url).await?;
+                    data = events::next_event(&mut client, &stream_url).await?;
                 }
                 debug!("Games in progress");
             }
@@ -61,7 +61,7 @@ async fn main() -> Result<()> {
                 let day = data.value.games.sim.day;
                 while data.value.games.sim.day == day {
                     debug!("Waiting for next day...");
-                    data = next_event(&mut client, &stream_url).await?;
+                    data = events::next_event(&mut client, &stream_url).await?;
                 }
             }
             _ => {
