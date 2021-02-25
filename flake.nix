@@ -14,7 +14,7 @@
     flake = false;
   };
 
-  outputs = { nixpkgs, flake-utils, rust-overlay, naersk, ... }:
+  outputs = { nixpkgs, flake-utils, rust-overlay, naersk, self, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -34,7 +34,11 @@
         packages = {
           idoleyes = naersk-lib.buildPackage {
             name = "idoleyes";
-            version = "unstable";
+            version =
+              let
+                rev = self.shortRev or null;
+              in
+                if rev != null then "unstable-${rev}" else "dirty";
             root = ./.;
             cargoBuildOptions = x: x ++ [ "-p idol_bot" ];
             nativeBuildInputs = with pkgs; [ llvmPackages.llvm pkgconfig ];
