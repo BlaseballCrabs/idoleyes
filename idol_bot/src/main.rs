@@ -1,5 +1,5 @@
 use anyhow::Result;
-use idol_bot::*;
+use idol_bot::{db::Database, *};
 use log::*;
 
 #[async_std::main]
@@ -14,12 +14,11 @@ async fn main() -> Result<()> {
 
     let db_uri = dotenv::var("DATABASE_URL")?;
 
-    let db = db_connect(&db_uri).await?;
+    let db = Database::connect(&db_uri).await?;
     debug!("Connected to database");
 
     let manual_webhook_urls = dotenv::var("WEBHOOK_URL");
-    db_add_urls(
-        &db,
+    db.add_urls(
         manual_webhook_urls
             .as_deref()
             .unwrap_or("")

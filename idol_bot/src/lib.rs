@@ -1,16 +1,17 @@
 use anyhow::{bail, Result};
 use async_std::prelude::*;
 use chrono::prelude::*;
+use db::Database;
 use idol_api::models::Event;
 use idol_api::State;
 use idol_predictor::algorithms::{ALGORITHMS, JOKE_ALGORITHMS};
 use log::*;
 use rand::prelude::*;
 use serde::Serialize;
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::fmt::Write;
 use std::pin::Pin;
 
+pub mod db;
 pub mod events;
 
 #[derive(Debug, Serialize)]
@@ -66,7 +67,7 @@ async fn send_message(url: &str, content: &str) -> Result<()> {
 }
 
 pub fn send_hook<'a>(
-    db: &'a SqlitePool,
+    db: &'a Database,
     data: &'a Event,
     retry: bool,
     test_mode: bool,
@@ -89,8 +90,8 @@ pub fn send_hook<'a>(
             }
         };
         info!("{}", content);
-        debug!("Sending to {} webhooks", db_url_count(db).await?);
-        let mut urls = db_urls(db).enumerate();
+        debug!("Sending to {} webhooks", db.count().await?);
+        let mut urls = db.urls().enumerate();
         while let Some((i, url)) = urls.next().await {
             let url = url?;
 
@@ -115,40 +116,6 @@ pub fn send_hook<'a>(
         }
         Ok(())
     })
-}
-
-pub async fn db_connect(uri: &str) -> Result<SqlitePool> {
-    let pool = SqlitePoolOptions::new().connect(uri).await?;
-
-    let migrator = sqlx::migrate!("./migrations");
-    migrator.run(&pool).await?;
-
-    Ok(pool)
-}
-
-pub fn db_urls(db: &SqlitePool) -> impl Stream<Item = Result<String>> + '_ {
-    sqlx::query!("SELECT url FROM webhooks")
-        .fetch(db)
-        .map(|x| Ok(x?.url))
-}
-
-pub async fn db_url_count(db: &SqlitePool) -> Result<i32> {
-    Ok(sqlx::query!("SELECT COUNT(*) as count FROM webhooks")
-        .fetch_one(db)
-        .await?
-        .count)
-}
-
-pub async fn db_add_urls(db: &SqlitePool, urls: impl Iterator<Item = &str>) -> Result<()> {
-    let mut transaction = db.begin().await?;
-    for url in urls {
-        debug!("adding URL: {:?}", url);
-        sqlx::query!("INSERT OR IGNORE INTO webhooks (url) VALUES (?)", url)
-            .execute(&mut transaction)
-            .await?;
-    }
-    transaction.commit().await?;
-    Ok(())
 }
 
 pub fn logger() -> Result<()> {
