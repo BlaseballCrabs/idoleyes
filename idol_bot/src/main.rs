@@ -29,15 +29,15 @@ async fn main() -> Result<()> {
     )
     .await?;
 
-    let mut client = sse_connect(stream_url).await;
+    let mut client = sse_connect(stream_url).await?;
     debug!("Connected to Blaseball");
 
     loop {
-        let mut data = next_event(&mut client, &stream_url).await;
+        let mut data = next_event(&mut client, &stream_url).await?;
         debug!("Phase {}", data.value.games.sim.phase);
         if test_mode != 0 {
             info!("TESTING MODE");
-            send_hook(&db, &data, false, true).await;
+            send_hook(&db, &data, false, true).await?;
             break;
         }
         match data.value.games.sim.phase {
@@ -45,23 +45,23 @@ async fn main() -> Result<()> {
                 debug!("Postseason");
                 if !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Betting allowed");
-                    send_hook(&db, &data, true, false).await;
+                    send_hook(&db, &data, true, false).await?;
                 } else {
                     debug!("No betting");
                 }
                 while !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Waiting for games to start...");
-                    data = next_event(&mut client, &stream_url).await;
+                    data = next_event(&mut client, &stream_url).await?;
                 }
                 debug!("Games in progress");
             }
             2 => {
                 debug!("Regular season");
-                send_hook(&db, &data, true, false).await;
+                send_hook(&db, &data, true, false).await?;
                 let day = data.value.games.sim.day;
                 while data.value.games.sim.day == day {
                     debug!("Waiting for next day...");
-                    data = next_event(&mut client, &stream_url).await;
+                    data = next_event(&mut client, &stream_url).await?;
                 }
             }
             _ => {

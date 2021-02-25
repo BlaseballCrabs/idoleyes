@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_std::prelude::*;
 use chrono::prelude::*;
 use idol_api::models::Event;
@@ -68,7 +68,7 @@ pub fn send_hook<'a>(
     data: &'a Event,
     retry: bool,
     test_mode: bool,
-) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
+) -> Pin<Box<dyn Future<Output = Result<()>> + 'a>> {
     Box::pin(async move {
         let content = match get_best(data).await {
             Ok(content) => content,
@@ -76,22 +76,21 @@ pub fn send_hook<'a>(
                 warn!("Failed to get message: {}", err);
                 if retry {
                     debug!("Retrying...");
-                    send_hook(db, data, false, test_mode).await;
-                    return;
+                    return send_hook(db, data, false, test_mode).await;
                 } else if test_mode {
                     debug!("Sending test message");
                     "Error getting best idols, ignoring due to test mode".into()
                 } else {
                     debug!("Not retrying");
-                    return;
+                    bail!("Failed to get message: {}", err);
                 }
             }
         };
         info!("{}", content);
-        debug!("Sending to {} webhooks", db_url_count(db).await.unwrap());
+        debug!("Sending to {} webhooks", db_url_count(db).await?);
         let mut urls = db_urls(db).enumerate();
         while let Some((i, url)) = urls.next().await {
-            let url = url.unwrap();
+            let url = url?;
 
             debug!("URL #{}", i + 1);
             match send_message(&url, &content).await {
@@ -112,13 +111,14 @@ pub fn send_hook<'a>(
                 }
             }
         }
+        Ok(())
     })
 }
 
 type Client = async_sse::Decoder<surf::Response>;
 
-pub async fn sse_connect(url: &str) -> Client {
-    let mut surf_req = surf::Request::new(http_types::Method::Get, url.parse().unwrap());
+pub async fn sse_connect(url: &str) -> Result<Client> {
+    let mut surf_req = surf::Request::new(http_types::Method::Get, surf::Url::parse(url)?);
     let http_req: &mut http_types::Request = surf_req.as_mut();
     async_sse::upgrade(http_req);
 
@@ -128,14 +128,17 @@ pub async fn sse_connect(url: &str) -> Client {
             warn!("Failed to connect");
             std::thread::sleep(std::time::Duration::from_millis(5000));
             debug!("Retrying...");
-            surf::client().send(surf_req).await.unwrap()
+            surf::client()
+                .send(surf_req)
+                .await
+                .map_err(|x| x.into_inner())?
         }
     };
 
-    async_sse::decode(resp)
+    Ok(async_sse::decode(resp))
 }
 
-pub async fn next_event(client: &mut Client, url: &str) -> Event {
+pub async fn next_event(client: &mut Client, url: &str) -> Result<Event> {
     loop {
         debug!("Waiting for event");
         match client.next().await {
@@ -150,11 +153,11 @@ pub async fn next_event(client: &mut Client, url: &str) -> Event {
                         error!("Couldn't parse event: {}", err);
                         std::thread::sleep(std::time::Duration::from_millis(5000));
                         debug!("Reconnecting...");
-                        *client = sse_connect(url).await;
+                        *client = sse_connect(url).await?;
                         continue;
                     }
                 };
-                break data;
+                break Ok(data);
             }
             Some(Ok(async_sse::Event::Retry(retry))) => {
                 debug!("got Retry: {:?}", retry);
@@ -164,14 +167,14 @@ pub async fn next_event(client: &mut Client, url: &str) -> Event {
                 error!("Error receiving event: {}", err);
                 std::thread::sleep(std::time::Duration::from_millis(5000));
                 debug!("Reconnecting...");
-                *client = sse_connect(url).await;
+                *client = sse_connect(url).await?;
                 continue;
             }
             None => {
                 warn!("Event stream ended");
                 std::thread::sleep(std::time::Duration::from_millis(5000));
                 debug!("Reconnecting...");
-                *client = sse_connect(url).await;
+                *client = sse_connect(url).await?;
                 continue;
             }
         }
