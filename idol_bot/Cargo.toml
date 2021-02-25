@@ -8,8 +8,6 @@ license = "GPL-2.0-only"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eventsource = { version = "0.6.0", git = "https://github.com/leo60228/eventsource.git", branch = "thiserror", features = ["reqwest"] }
-reqwest = { version = "0.10.8", features = ["json"] }
 anyhow = "1.0.33"
 serde = { version = "1.0.116", features = ["derive"] }
 serde_json = "1.0.59"
@@ -21,3 +19,7 @@ idol_predictor = { path = "../idol_predictor" }
 idol_api = { path = "../idol_api" }
 rand = "0.7.3"
 syslog = "4.0.1"
+async-std = { version = "1.9.0", features = ["attributes"] }
+surf = "2.1.0"
+async-sse = "5.0.0"
+http-types = "2.10.0"

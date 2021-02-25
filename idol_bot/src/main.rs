@@ -1,14 +1,14 @@
 use anyhow::Result;
+use async_std::prelude::*;
 use chrono::prelude::*;
-use eventsource::reqwest::Client;
 use idol_api::models::Event;
 use idol_api::State;
 use idol_predictor::algorithms::{ALGORITHMS, JOKE_ALGORITHMS};
 use log::*;
 use rand::prelude::*;
-use reqwest::Url;
 use serde::Serialize;
 use std::fmt::Write;
+use std::pin::Pin;
 
 #[derive(Debug, Serialize)]
 pub struct Webhook<'a> {
@@ -16,10 +16,10 @@ pub struct Webhook<'a> {
     pub avatar_url: &'static str,
 }
 
-fn get_best(data: &Event) -> Result<String> {
+async fn get_best(data: &Event) -> Result<String> {
     let day = data.value.games.sim.day;
     debug!("Building state");
-    let state = State::from_event(data)?;
+    let state = State::from_event(data).await?;
     let mut text = String::new();
     writeln!(text, "**Day {}**", day + 2)?; // tomorrow, zero-indexed
     for algorithm in ALGORITHMS {
@@ -49,67 +49,95 @@ fn get_best(data: &Event) -> Result<String> {
     Ok(text)
 }
 
-fn send_message(url: &str, content: &str) -> Result<()> {
+async fn send_message(url: &str, content: &str) -> Result<()> {
     let hook = Webhook {
         content,
         avatar_url: "http://hs.hiveswap.com/ezodiac/images/aspect_7.png",
     };
-    reqwest::blocking::Client::new()
-        .post(url)
-        .json(&hook)
-        .send()?;
+    surf::post(url)
+        .body(surf::Body::from_json(&hook).map_err(|x| x.into_inner())?)
+        .send()
+        .await
+        .map_err(|x| x.into_inner())?;
     Ok(())
 }
 
-fn send_hook(urls: &[&str], data: &Event, retry: bool, test_mode: bool) {
-    let content = match get_best(data) {
-        Ok(content) => content,
-        Err(err) => {
-            warn!("Failed to get message: {}", err);
-            if retry {
-                debug!("Retrying...");
-                send_hook(urls, data, false, test_mode);
-                return;
-            } else if test_mode {
-                debug!("Sending test message");
-                "Error getting best idols, ignoring due to test mode".into()
-            } else {
-                debug!("Not retrying");
-                return;
-            }
-        }
-    };
-    info!("{}", content);
-    debug!("Sending to {} webhooks", urls.len());
-    for (i, url) in urls.iter().enumerate() {
-        debug!("URL #{}", i + 1);
-        match send_message(url, &content) {
-            Ok(_) => {
-                debug!("Sent");
-            }
+fn send_hook<'a>(
+    urls: &'a [&'a str],
+    data: &'a Event,
+    retry: bool,
+    test_mode: bool,
+) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
+    Box::pin(async move {
+        let content = match get_best(data).await {
+            Ok(content) => content,
             Err(err) => {
-                warn!("Failed to send message: {}", err);
-                debug!("Retrying...");
-                match send_message(url, &content) {
-                    Ok(_) => {
-                        debug!("Sent");
-                    }
-                    Err(err) => {
-                        error!("Failed to send twice, not retrying: {}", err);
+                warn!("Failed to get message: {}", err);
+                if retry {
+                    debug!("Retrying...");
+                    send_hook(urls, data, false, test_mode).await;
+                    return;
+                } else if test_mode {
+                    debug!("Sending test message");
+                    "Error getting best idols, ignoring due to test mode".into()
+                } else {
+                    debug!("Not retrying");
+                    return;
+                }
+            }
+        };
+        info!("{}", content);
+        debug!("Sending to {} webhooks", urls.len());
+        for (i, url) in urls.iter().enumerate() {
+            debug!("URL #{}", i + 1);
+            match send_message(url, &content).await {
+                Ok(_) => {
+                    debug!("Sent");
+                }
+                Err(err) => {
+                    warn!("Failed to send message: {}", err);
+                    debug!("Retrying...");
+                    match send_message(url, &content).await {
+                        Ok(_) => {
+                            debug!("Sent");
+                        }
+                        Err(err) => {
+                            error!("Failed to send twice, not retrying: {}", err);
+                        }
                     }
                 }
             }
         }
-    }
+    })
 }
 
-fn next_event(client: &mut Client, url: &Url) -> Event {
+type Client = async_sse::Decoder<surf::Response>;
+
+async fn sse_connect(url: &str) -> Client {
+    let mut surf_req = surf::Request::new(http_types::Method::Get, url.parse().unwrap());
+    let http_req: &mut http_types::Request = surf_req.as_mut();
+    async_sse::upgrade(http_req);
+
+    let resp = match surf::client().send(surf_req.clone()).await {
+        Ok(resp) => resp,
+        Err(_) => {
+            warn!("Failed to connect");
+            std::thread::sleep(std::time::Duration::from_millis(5000));
+            debug!("Retrying...");
+            surf::client().send(surf_req).await.unwrap()
+        }
+    };
+
+    async_sse::decode(resp)
+}
+
+async fn next_event(client: &mut Client, url: &str) -> Event {
     loop {
         debug!("Waiting for event");
-        match client.next() {
-            Some(Ok(event)) => {
+        match client.next().await {
+            Some(Ok(async_sse::Event::Message(message))) => {
                 debug!("Received event");
-                let data: Event = match serde_json::from_str(&event.data) {
+                let data: Event = match serde_json::from_slice(&message.data()) {
                     Ok(data) => {
                         debug!("Parsed event");
                         data
@@ -118,24 +146,28 @@ fn next_event(client: &mut Client, url: &Url) -> Event {
                         error!("Couldn't parse event: {}", err);
                         std::thread::sleep(std::time::Duration::from_millis(5000));
                         debug!("Reconnecting...");
-                        *client = Client::new(url.clone());
+                        *client = sse_connect(url).await;
                         continue;
                     }
                 };
                 break data;
             }
+            Some(Ok(async_sse::Event::Retry(retry))) => {
+                debug!("got Retry: {:?}", retry);
+                continue;
+            }
             Some(Err(err)) => {
                 error!("Error receiving event: {}", err);
                 std::thread::sleep(std::time::Duration::from_millis(5000));
                 debug!("Reconnecting...");
-                *client = Client::new(url.clone());
+                *client = sse_connect(url).await;
                 continue;
             }
             None => {
                 warn!("Event stream ended");
                 std::thread::sleep(std::time::Duration::from_millis(5000));
                 debug!("Reconnecting...");
-                *client = Client::new(url.clone());
+                *client = sse_connect(url).await;
                 continue;
             }
         }
@@ -184,7 +216,8 @@ fn logger() -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
+#[async_std::main]
+async fn main() -> Result<()> {
     logger()?;
 
     let urls_raw = dotenv::var("WEBHOOK_URL")?;
@@ -193,16 +226,16 @@ fn main() -> Result<()> {
         .and_then(|x| x.parse().ok())
         .unwrap_or(0);
     let urls: Vec<&str> = urls_raw.split(',').collect();
-    let stream_url = Url::parse("https://www.blaseball.com/events/streamData")?;
+    let stream_url = "https://www.blaseball.com/events/streamData";
 
-    let mut client = Client::new(stream_url.clone());
+    let mut client = sse_connect(stream_url).await;
     debug!("Connected");
     loop {
-        let mut data = next_event(&mut client, &stream_url);
+        let mut data = next_event(&mut client, &stream_url).await;
         debug!("Phase {}", data.value.games.sim.phase);
         if test_mode != 0 {
             info!("TESTING MODE");
-            send_hook(&urls, &data, false, true);
+            send_hook(&urls, &data, false, true).await;
             break;
         }
         match data.value.games.sim.phase {
@@ -210,23 +243,23 @@ fn main() -> Result<()> {
                 debug!("Postseason");
                 if !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Betting allowed");
-                    send_hook(&urls, &data, true, false);
+                    send_hook(&urls, &data, true, false).await;
                 } else {
                     debug!("No betting");
                 }
                 while !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Waiting for games to start...");
-                    data = next_event(&mut client, &stream_url);
+                    data = next_event(&mut client, &stream_url).await;
                 }
                 debug!("Games in progress");
             }
             2 => {
                 debug!("Regular season");
-                send_hook(&urls, &data, true, false);
+                send_hook(&urls, &data, true, false).await;
                 let day = data.value.games.sim.day;
                 while data.value.games.sim.day == day {
                     debug!("Waiting for next day...");
-                    data = next_event(&mut client, &stream_url);
+                    data = next_event(&mut client, &stream_url).await;
                 }
             }
             _ => {

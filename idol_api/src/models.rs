@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct PitchingStats {
     pub player_id: String,
     #[serde(with = "serde_with::rust::display_fromstr")]
-    pub k_per_9: f64,
+    pub strikeouts_per_9: f64,
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub games: usize,
 }

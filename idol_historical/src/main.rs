@@ -88,7 +88,7 @@ impl StatState {
             .iter()
             .map(|x| PitchingStats {
                 player_id: x.0.clone(),
-                k_per_9: (x.1.strikeouts * 9) as f64 / x.1.innings_pitched as f64,
+                strikeouts_per_9: (x.1.strikeouts * 9) as f64 / x.1.innings_pitched as f64,
                 games: 0,
             })
             .collect();

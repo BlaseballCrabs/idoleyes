@@ -36,12 +36,12 @@ macro_rules! algorithm {
     };
 }
 
-algorithm!(SO9, "SO/9", [], Unforbidden, |x| x.stats?.k_per_9);
+algorithm!(SO9, "SO/9", [], Unforbidden, |x| x.stats?.strikeouts_per_9);
 
 algorithm!(RUTHLESSNESS, _, [SO9], Forbidden, |x| x.player.ruthlessness);
 
 algorithm!(STAT_RATIO, "(SO/9)(SO/AB)", [SO9], Unforbidden, |x| {
-    x.stats?.k_per_9
+    x.stats?.strikeouts_per_9
         * (0.2
             + x.opponent
                 .strikeouts(x.state)
@@ -143,7 +143,7 @@ const LIFT_ID: &str = "c73b705c-40ad-4633-a6ed-d357ee2e2bcf";
 algorithm!(LIFT, @ "Against Lift", [], Unforbidden, |x| if x.opponent.id == LIFT_ID { 1.0 } else { 0.0 });
 
 algorithm!(WORST_STAT_RATIO, @ "Worst by (-SO/9)/(SO/AB)", [SO9], Unforbidden, |x| {
-    -x.stats?.k_per_9
+    -x.stats?.strikeouts_per_9
         / x.opponent
                 .strikeouts(x.state)
                 .zip(x.opponent.at_bats(x.state))

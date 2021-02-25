@@ -9,7 +9,7 @@ license = "GPL-2.0-only"
 
 [dependencies]
 anyhow = "1.0.33"
-reqwest = { version = "0.10.8", features = ["json", "blocking"] }
 serde = { version = "1.0.116", features = ["derive"] }
 serde_with = "1.5.1"
 log = "0.4.11"
+surf = "2.1.0"

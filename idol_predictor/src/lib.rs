@@ -69,7 +69,9 @@ pub enum PrintedStat {
 impl PrintedStat {
     fn print(self, pitcher: PitcherRef) -> impl fmt::Display + '_ {
         match (pitcher.stats, self) {
-            (Some(stats), Self::SO9) => Either::Left(lazy_format!("SO/9: {}", stats.k_per_9)),
+            (Some(stats), Self::SO9) => {
+                Either::Left(lazy_format!("SO/9: {}", stats.strikeouts_per_9))
+            }
             (None, Self::SO9) => Either::Right("SO/9: N/A"),
         }
     }
