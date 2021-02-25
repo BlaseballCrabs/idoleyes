@@ -1,10 +1,10 @@
 use anyhow::Result;
-use idol_bot::{db::Database, events::Client, *};
+use idol_bot::{db::Database, events::Client, logger, send_hook};
 use log::*;
 
 #[async_std::main]
 async fn main() -> Result<()> {
-    idol_bot::logger()?;
+    logger::init()?;
 
     let test_mode: usize = dotenv::var("TEST_MODE")
         .ok()
