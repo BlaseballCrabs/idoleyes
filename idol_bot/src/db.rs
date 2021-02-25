@@ -3,6 +3,7 @@ use async_std::prelude::*;
 use log::*;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 
+#[derive(Clone)]
 pub struct Database {
     pool: SqlitePool,
 }

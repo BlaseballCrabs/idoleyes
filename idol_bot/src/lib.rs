@@ -71,7 +71,7 @@ pub fn send_hook<'a>(
     data: &'a Event,
     retry: bool,
     test_mode: bool,
-) -> Pin<Box<dyn Future<Output = Result<()>> + 'a>> {
+) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
     Box::pin(async move {
         let content = match get_best(data).await {
             Ok(content) => content,

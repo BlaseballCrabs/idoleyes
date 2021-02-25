@@ -1,4 +1,5 @@
 use anyhow::Result;
+use async_std::task;
 use idol_bot::{db::Database, events::Client, logger, send_hook};
 use log::*;
 
@@ -37,7 +38,8 @@ async fn main() -> Result<()> {
         info!("TESTING MODE");
         send_hook(&db, &data, false, true).await?;
     } else {
-        client.run(&db).await?;
+        let bot = task::spawn(client.run(&db));
+        bot.await?;
     }
 
     Ok(())

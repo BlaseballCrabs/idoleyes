@@ -79,36 +79,39 @@ impl Client {
         }
     }
 
-    pub async fn run(&mut self, db: &Database) -> Result<()> {
-        loop {
-            let mut data = self.next_event().await?;
-            debug!("Phase {}", data.value.games.sim.phase);
-            match data.value.games.sim.phase {
-                4 | 10 | 11 | 13 | 14 => {
-                    debug!("Postseason");
-                    if !data.value.games.tomorrow_schedule.is_empty() {
-                        debug!("Betting allowed");
+    pub fn run(mut self, db: &Database) -> impl Future<Output = Result<()>> {
+        let db = db.clone();
+        async move {
+            loop {
+                let mut data = self.next_event().await?;
+                debug!("Phase {}", data.value.games.sim.phase);
+                match data.value.games.sim.phase {
+                    4 | 10 | 11 | 13 | 14 => {
+                        debug!("Postseason");
+                        if !data.value.games.tomorrow_schedule.is_empty() {
+                            debug!("Betting allowed");
+                            send_hook(&db, &data, true, false).await?;
+                        } else {
+                            debug!("No betting");
+                        }
+                        while !data.value.games.tomorrow_schedule.is_empty() {
+                            debug!("Waiting for games to start...");
+                            data = self.next_event().await?;
+                        }
+                        debug!("Games in progress");
+                    }
+                    2 => {
+                        debug!("Regular season");
                         send_hook(&db, &data, true, false).await?;
-                    } else {
-                        debug!("No betting");
+                        let day = data.value.games.sim.day;
+                        while data.value.games.sim.day == day {
+                            debug!("Waiting for next day...");
+                            data = self.next_event().await?;
+                        }
                     }
-                    while !data.value.games.tomorrow_schedule.is_empty() {
-                        debug!("Waiting for games to start...");
-                        data = self.next_event().await?;
+                    _ => {
+                        debug!("Not season");
                     }
-                    debug!("Games in progress");
-                }
-                2 => {
-                    debug!("Regular season");
-                    send_hook(&db, &data, true, false).await?;
-                    let day = data.value.games.sim.day;
-                    while data.value.games.sim.day == day {
-                        debug!("Waiting for next day...");
-                        data = self.next_event().await?;
-                    }
-                }
-                _ => {
-                    debug!("Not season");
                 }
             }
         }
