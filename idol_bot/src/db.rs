@@ -10,6 +10,7 @@ pub struct Database {
 
 pub struct Webhook {
     pub url: String,
+    pub liftcord: bool,
 }
 
 impl Database {
@@ -23,7 +24,7 @@ impl Database {
     }
 
     pub fn webhooks(&self) -> impl Stream<Item = Result<Webhook>> + '_ {
-        sqlx::query_as!(Webhook, "SELECT url FROM webhooks")
+        sqlx::query_as!(Webhook, "SELECT url, liftcord FROM webhooks")
             .fetch(&self.pool)
             .map(|x| Ok(x?))
     }

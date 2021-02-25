@@ -239,7 +239,6 @@ pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];
 pub const JOKE_ALGORITHMS: &[Algorithm] = &[
     BESTNESS,
     BEST_BEST,
-    LIFT,
     WORST_STAT_RATIO,
     IDOLS,
     BATTING_STARS,
