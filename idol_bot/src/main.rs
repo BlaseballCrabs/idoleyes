@@ -31,42 +31,13 @@ async fn main() -> Result<()> {
     let mut client = Client::connect(stream_url).await?;
     debug!("Connected to Blaseball");
 
-    loop {
-        let mut data = client.next_event().await?;
+    if test_mode != 0 {
+        let data = client.next_event().await?;
         debug!("Phase {}", data.value.games.sim.phase);
-        if test_mode != 0 {
-            info!("TESTING MODE");
-            send_hook(&db, &data, false, true).await?;
-            break;
-        }
-        match data.value.games.sim.phase {
-            4 | 10 | 11 | 13 | 14 => {
-                debug!("Postseason");
-                if !data.value.games.tomorrow_schedule.is_empty() {
-                    debug!("Betting allowed");
-                    send_hook(&db, &data, true, false).await?;
-                } else {
-                    debug!("No betting");
-                }
-                while !data.value.games.tomorrow_schedule.is_empty() {
-                    debug!("Waiting for games to start...");
-                    data = client.next_event().await?;
-                }
-                debug!("Games in progress");
-            }
-            2 => {
-                debug!("Regular season");
-                send_hook(&db, &data, true, false).await?;
-                let day = data.value.games.sim.day;
-                while data.value.games.sim.day == day {
-                    debug!("Waiting for next day...");
-                    data = client.next_event().await?;
-                }
-            }
-            _ => {
-                debug!("Not season");
-            }
-        }
+        info!("TESTING MODE");
+        send_hook(&db, &data, false, true).await?;
+    } else {
+        client.run(&db).await?;
     }
 
     Ok(())
