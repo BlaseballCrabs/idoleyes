@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use async_std::prelude::*;
 use db::Database;
 use idol_api::models::Event;
@@ -59,11 +59,13 @@ async fn send_message(url: &str, content: &str) -> Result<()> {
         content,
         avatar_url: "http://hs.hiveswap.com/ezodiac/images/aspect_7.png",
     };
-    surf::post(url)
+    let status = surf::post(url)
         .body(surf::Body::from_json(&hook).map_err(|x| x.into_inner())?)
         .send()
         .await
-        .map_err(|x| x.into_inner())?;
+        .map_err(|x| x.into_inner())?
+        .status();
+    ensure!(status.is_success(), "Couldn't send webhook: {}", status);
     Ok(())
 }
 
