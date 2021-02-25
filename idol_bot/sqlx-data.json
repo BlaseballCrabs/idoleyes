@@ -1,0 +1,49 @@
+{
+  "db": "SQLite",
+  "34ea0a472a7181729fe8661cbafcce535b409f137d1a0e55029c86a4ae950356": {
+    "query": "SELECT url FROM webhooks",
+    "describe": {
+      "columns": [
+        {
+          "name": "url",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "4382005e989dadfbe1d0fae4329815e0e0bc43a7cb753cbbf246834cda6ff53b": {
+    "query": "INSERT OR IGNORE INTO webhooks (url) VALUES (?)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
+  "4473d3d32dfb6fc2bb39ee5a0b89fb9d8ddad775ed7a5532965b846b13ccce83": {
+    "query": "SELECT COUNT(*) as count FROM webhooks",
+    "describe": {
+      "columns": [
+        {
+          "name": "count",
+          "ordinal": 0,
+          "type_info": "Int"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false
+      ]
+    }
+  }
+}

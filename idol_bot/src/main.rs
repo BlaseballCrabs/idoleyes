@@ -7,6 +7,7 @@ use idol_predictor::algorithms::{ALGORITHMS, JOKE_ALGORITHMS};
 use log::*;
 use rand::prelude::*;
 use serde::Serialize;
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::fmt::Write;
 use std::pin::Pin;
 
@@ -63,7 +64,7 @@ async fn send_message(url: &str, content: &str) -> Result<()> {
 }
 
 fn send_hook<'a>(
-    urls: &'a [&'a str],
+    db: &'a SqlitePool,
     data: &'a Event,
     retry: bool,
     test_mode: bool,
@@ -75,7 +76,7 @@ fn send_hook<'a>(
                 warn!("Failed to get message: {}", err);
                 if retry {
                     debug!("Retrying...");
-                    send_hook(urls, data, false, test_mode).await;
+                    send_hook(db, data, false, test_mode).await;
                     return;
                 } else if test_mode {
                     debug!("Sending test message");
@@ -87,17 +88,20 @@ fn send_hook<'a>(
             }
         };
         info!("{}", content);
-        debug!("Sending to {} webhooks", urls.len());
-        for (i, url) in urls.iter().enumerate() {
+        debug!("Sending to {} webhooks", db_url_count(db).await.unwrap());
+        let mut urls = db_urls(db).enumerate();
+        while let Some((i, url)) = urls.next().await {
+            let url = url.unwrap();
+
             debug!("URL #{}", i + 1);
-            match send_message(url, &content).await {
+            match send_message(&url, &content).await {
                 Ok(_) => {
                     debug!("Sent");
                 }
                 Err(err) => {
                     warn!("Failed to send message: {}", err);
                     debug!("Retrying...");
-                    match send_message(url, &content).await {
+                    match send_message(&url, &content).await {
                         Ok(_) => {
                             debug!("Sent");
                         }
@@ -174,6 +178,40 @@ async fn next_event(client: &mut Client, url: &str) -> Event {
     }
 }
 
+async fn db_connect(uri: &str) -> Result<SqlitePool> {
+    let pool = SqlitePoolOptions::new().connect(uri).await?;
+
+    let migrator = sqlx::migrate!("./migrations");
+    migrator.run(&pool).await?;
+
+    Ok(pool)
+}
+
+fn db_urls(db: &SqlitePool) -> impl Stream<Item = Result<String>> + '_ {
+    sqlx::query!("SELECT url FROM webhooks")
+        .fetch(db)
+        .map(|x| Ok(x?.url))
+}
+
+async fn db_url_count(db: &SqlitePool) -> Result<i32> {
+    Ok(sqlx::query!("SELECT COUNT(*) as count FROM webhooks")
+        .fetch_one(db)
+        .await?
+        .count)
+}
+
+async fn db_add_urls(db: &SqlitePool, urls: impl Iterator<Item = &str>) -> Result<()> {
+    let mut transaction = db.begin().await?;
+    for url in urls {
+        debug!("adding URL: {:?}", url);
+        sqlx::query!("INSERT OR IGNORE INTO webhooks (url) VALUES (?)", url)
+            .execute(&mut transaction)
+            .await?;
+    }
+    transaction.commit().await?;
+    Ok(())
+}
+
 fn logger() -> Result<()> {
     let syslog_fmt = syslog::Formatter3164 {
         facility: syslog::Facility::LOG_USER,
@@ -220,22 +258,38 @@ fn logger() -> Result<()> {
 async fn main() -> Result<()> {
     logger()?;
 
-    let urls_raw = dotenv::var("WEBHOOK_URL")?;
     let test_mode: usize = dotenv::var("TEST_MODE")
         .ok()
         .and_then(|x| x.parse().ok())
         .unwrap_or(0);
-    let urls: Vec<&str> = urls_raw.split(',').collect();
     let stream_url = "https://www.blaseball.com/events/streamData";
 
+    let db_uri = dotenv::var("DATABASE_URL")?;
+
+    let db = db_connect(&db_uri).await?;
+    debug!("Connected to database");
+
+    let manual_webhook_urls = dotenv::var("WEBHOOK_URL");
+    db_add_urls(
+        &db,
+        manual_webhook_urls
+            .as_deref()
+            .unwrap_or("")
+            .split(',')
+            .map(|x| x.trim())
+            .filter(|x| !x.is_empty()),
+    )
+    .await?;
+
     let mut client = sse_connect(stream_url).await;
-    debug!("Connected");
+    debug!("Connected to Blaseball");
+
     loop {
         let mut data = next_event(&mut client, &stream_url).await;
         debug!("Phase {}", data.value.games.sim.phase);
         if test_mode != 0 {
             info!("TESTING MODE");
-            send_hook(&urls, &data, false, true).await;
+            send_hook(&db, &data, false, true).await;
             break;
         }
         match data.value.games.sim.phase {
@@ -243,7 +297,7 @@ async fn main() -> Result<()> {
                 debug!("Postseason");
                 if !data.value.games.tomorrow_schedule.is_empty() {
                     debug!("Betting allowed");
-                    send_hook(&urls, &data, true, false).await;
+                    send_hook(&db, &data, true, false).await;
                 } else {
                     debug!("No betting");
                 }
@@ -255,7 +309,7 @@ async fn main() -> Result<()> {
             }
             2 => {
                 debug!("Regular season");
-                send_hook(&urls, &data, true, false).await;
+                send_hook(&db, &data, true, false).await;
                 let day = data.value.games.sim.day;
                 while data.value.games.sim.day == day {
                     debug!("Waiting for next day...");
