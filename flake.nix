@@ -32,13 +32,9 @@
         };
       in rec {
         packages = {
-          idoleyes = naersk-lib.buildPackage {
+          idoleyes = naersk-lib.buildPackage rec {
             name = "idoleyes";
-            version =
-              let
-                rev = self.shortRev or null;
-              in
-                if rev != null then "unstable-${rev}" else "dirty";
+            version = "unstable";
             root = ./.;
             cargoBuildOptions = x: x ++ [ "-p idol_bot" ];
             nativeBuildInputs = with pkgs; [ llvmPackages.llvm pkgconfig ];
@@ -48,6 +44,15 @@
               preConfigure = ''
               export BINDGEN_EXTRA_CLANG_ARGS="-isystem ${pkgs.clang}/resource-root/include $NIX_CFLAGS_COMPILE"
               '';
+            });
+            overrideMain = x: (x // rec {
+              name = "${pname}-${version}";
+              pname = "idoleyes";
+              version =
+                let
+                  rev = self.shortRev or null;
+                in
+                  if rev != null then "unstable-${rev}" else "dirty";
             });
           };
         };
