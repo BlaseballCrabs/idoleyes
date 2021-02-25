@@ -9,4 +9,4 @@ let
     src = ./.;
   };
 in
-  expressions.defaultNix
+  expressions.defaultNix.default
