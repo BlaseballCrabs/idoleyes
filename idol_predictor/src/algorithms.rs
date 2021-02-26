@@ -234,15 +234,57 @@ algorithm!(
     })
 );
 
-pub const ALGORITHMS: &[Algorithm] = &[SO9, RUTHLESSNESS, STAT_RATIO];
+macro_rules! eat {
+    ($x:expr) => {};
+}
 
-pub const JOKE_ALGORITHMS: &[Algorithm] = &[
-    BESTNESS,
-    BEST_BEST,
-    WORST_STAT_RATIO,
-    IDOLS,
-    BATTING_STARS,
-    NAME_LENGTH,
-    GAMES_PER_GAME,
-    GAMES_NAME_PER_GAME,
-];
+macro_rules! algorithms {
+    (const ALGORITHMS = [$($serious:expr),*]; const JOKE_ALGORITHMS = [$($jokes:expr),*$(,)?];) => {
+        pub const ALL_ALGORITHMS: &[Algorithm] = &[
+            $($serious, )*
+            $($jokes, )*
+        ];
+
+        #[allow(clippy::eval_order_dependence, unused_assignments)]
+        pub const ALGORITHMS: &[i64] = {
+            let mut i = 0;
+            &[
+                $({
+                    eat!($serious);
+                    let val = i;
+                    i += 1;
+                    val
+                }),*
+            ]
+        };
+
+        #[allow(clippy::eval_order_dependence, unused_assignments)]
+        pub const JOKE_ALGORITHMS: &[i64] = {
+            let mut i = ALGORITHMS.len() as i64;
+            &[
+                $({
+                    eat!($jokes);
+                    let val = i;
+                    i += 1;
+                    val
+                }),*
+            ]
+        };
+    };
+}
+
+algorithms! {
+    const ALGORITHMS = [SO9, RUTHLESSNESS, STAT_RATIO];
+
+    const JOKE_ALGORITHMS = [
+        LIFT,
+        BESTNESS,
+        BEST_BEST,
+        WORST_STAT_RATIO,
+        IDOLS,
+        BATTING_STARS,
+        NAME_LENGTH,
+        GAMES_PER_GAME,
+        GAMES_NAME_PER_GAME,
+    ];
+}

@@ -1,14 +1,15 @@
-use anyhow::{bail, ensure, Result};
-use async_std::prelude::*;
-use db::{Database, Webhook};
+use anyhow::{ensure, Result};
+use db::Database;
+use futures::prelude::*;
 use idol_api::models::Event;
 use idol_api::State;
-use idol_predictor::algorithms::{ALGORITHMS, JOKE_ALGORITHMS, LIFT};
+use idol_predictor::algorithms::ALL_ALGORITHMS;
 use log::*;
 use rand::prelude::*;
 use serde::Serialize;
 use std::fmt::Write;
 use std::pin::Pin;
+use std::sync::Arc;
 
 pub mod db;
 pub mod events;
@@ -21,43 +22,27 @@ pub struct WebhookPayload<'a> {
     pub avatar_url: &'static str,
 }
 
-async fn get_best(data: &Event, liftcord: bool) -> Result<String> {
-    let lift_joke = if liftcord { None } else { Some(&LIFT) };
-    let lift_always = if liftcord { Some(&LIFT) } else { None };
-
-    let day = data.value.games.sim.day;
+async fn get_best(data: &Event) -> Result<Vec<Option<String>>> {
     debug!("Building state");
     let state = State::from_event(data).await?;
-    let mut text = String::new();
-    writeln!(text, "**Day {}**", day + 2)?; // tomorrow, zero-indexed
-    for algorithm in ALGORITHMS.iter().chain(lift_always) {
-        debug!("{}", algorithm.name);
-        match algorithm.write_best_to(&state, &mut text) {
-            Ok(_) => {
-                debug!("Succeeded");
-            }
-            Err(err) => {
-                warn!("Algorithm failed: {}", err);
-            }
-        }
-    }
 
-    let joke_algorithms = JOKE_ALGORITHMS.iter().chain(lift_joke);
-    loop {
-        let joke = joke_algorithms.clone().choose(&mut thread_rng()).unwrap();
-
-        debug!("Joke: {}", joke.name);
-        match joke.write_best_to(&state, &mut text) {
-            Ok(_) => {
-                debug!("Succeeded");
-                break;
+    Ok(ALL_ALGORITHMS
+        .iter()
+        .map(|algorithm| {
+            debug!("{}", algorithm.name);
+            let mut text = String::new();
+            match algorithm.write_best_to(&state, &mut text) {
+                Ok(_) => {
+                    debug!("Succeeded");
+                    Some(text)
+                }
+                Err(err) => {
+                    warn!("Algorithm failed: {}", err);
+                    None
+                }
             }
-            Err(err) => {
-                warn!("Joke algorithm failed: {}", err);
-            }
-        }
-    }
-    Ok(text)
+        })
+        .collect())
 }
 
 async fn send_message(db: &Database, url: &str, content: &str) -> Result<()> {
@@ -89,61 +74,78 @@ pub fn send_hook<'a>(
     test_mode: bool,
 ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
     Box::pin(async move {
-        macro_rules! try_get_best {
-            ($liftcord:expr) => {
-                match get_best(data, $liftcord).await {
-                    Ok(content) => content,
-                    Err(err) => {
-                        warn!("Failed to get message: {}", err);
-                        if retry {
-                            debug!("Retrying...");
-                            return send_hook(db, data, false, test_mode).await;
-                        } else if test_mode {
-                            debug!("Sending test message");
-                            "Error getting best idols, ignoring due to test mode".into()
-                        } else {
-                            debug!("Not retrying");
-                            bail!("Failed to get message: {}", err);
-                        }
-                    }
+        let day = data.value.games.sim.day + 2;
+
+        let best: Arc<[_]> = match get_best(data).await {
+            Ok(content) => Arc::from(content),
+            Err(err) => {
+                warn!("Failed to get best: {}", err);
+                if retry {
+                    debug!("Retrying...");
+                    return send_hook(db, data, false, test_mode).await;
+                } else if test_mode {
+                    debug!("Sending test message");
+                    Arc::from(vec![Some(
+                        "Error getting best idols, ignoring due to test mode".into(),
+                    )])
+                } else {
+                    debug!("Not retrying");
+                    return Err(err.context("Failed to get best"));
                 }
-            };
+            }
         };
 
-        let content = try_get_best!(false);
-        let liftcord_content = try_get_best!(true);
-
-        info!("{}", content);
         debug!("Sending to {} webhooks", db.count().await?);
-        let mut webhooks = db.webhooks().enumerate();
-        while let Some((i, webhook)) = webhooks.next().await {
-            let Webhook { url, liftcord } = webhook?;
+        db.webhooks()
+            .enumerate()
+            .map(|(i, x)| Ok::<_, anyhow::Error>((i, x?)))
+            .try_for_each_concurrent(None, |(i, webhook)| {
+                let best = best.clone();
+                async move {
+                    debug!("URL #{}", i + 1);
 
-            let content = if liftcord {
-                &liftcord_content
-            } else {
-                &content
-            };
+                    let mut content = String::new();
 
-            debug!("URL #{}", i + 1);
-            match send_message(&db, &url, &content).await {
-                Ok(_) => {
-                    debug!("Sent");
-                }
-                Err(err) => {
-                    warn!("Failed to send message: {}", err);
-                    debug!("Retrying...");
-                    match send_message(&db, &url, &content).await {
+                    writeln!(content, "**Day {}**", day)?;
+
+                    let algorithms = db.algorithms(&webhook, false).await?;
+
+                    for algorithm in algorithms {
+                        if let Some(Some(best)) = best.get(algorithm as usize) {
+                            write!(content, "{}", best)?;
+                        }
+                    }
+
+                    let joke_algorithm_ids = db.algorithms(&webhook, true).await?;
+                    let joke_algorithms = joke_algorithm_ids
+                        .iter()
+                        .filter_map(|&x| best.get(x as usize).map(Option::as_ref).flatten());
+                    if let Some(joke_algorithm) = joke_algorithms.choose(&mut thread_rng()) {
+                        write!(content, "{}", joke_algorithm)?;
+                    }
+
+                    match send_message(&db, &webhook.url, &content).await {
                         Ok(_) => {
                             debug!("Sent");
                         }
                         Err(err) => {
-                            error!("Failed to send twice, not retrying: {}", err);
+                            warn!("Failed to send message: {}", err);
+                            debug!("Retrying...");
+                            match send_message(&db, &webhook.url, &content).await {
+                                Ok(_) => {
+                                    debug!("Sent");
+                                }
+                                Err(err) => {
+                                    error!("Failed to send twice, not retrying: {}", err);
+                                }
+                            }
                         }
                     }
+
+                    Ok(())
                 }
-            }
-        }
+            })
+            .await?;
         Ok(())
     })
 }

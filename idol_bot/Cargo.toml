@@ -25,3 +25,4 @@ async-sse = "5.0.0"
 http-types = "2.10.0"
 sqlx = { version = "0.5.1", features = ["sqlite", "runtime-async-std-native-tls", "offline"] }
 tide = "0.16.0"
+futures = "0.3.13"

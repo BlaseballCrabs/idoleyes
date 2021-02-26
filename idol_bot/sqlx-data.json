@@ -1,5 +1,23 @@
 {
   "db": "SQLite",
+  "1a98f1ba3b7913b6b053aec17e1aedbb09921fa3dd92843ebe976d4f0f460067": {
+    "query": "SELECT algorithm FROM algorithms WHERE webhook_id = ? AND joke = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "algorithm",
+          "ordinal": 0,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "4382005e989dadfbe1d0fae4329815e0e0bc43a7cb753cbbf246834cda6ff53b": {
     "query": "INSERT OR IGNORE INTO webhooks (url) VALUES (?)",
     "describe": {
@@ -28,29 +46,19 @@
       ]
     }
   },
-  "a043fd4969b146748774f19e71cc1333d0003403922cb13004c7449c0a807bfe": {
-    "query": "DELETE FROM webhooks WHERE url = ?",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": []
-    }
-  },
-  "c4f9dac0463e37918ae188098a1fdc3a789f2d27f55861dddd3c02a353e793d5": {
-    "query": "SELECT url, liftcord FROM webhooks",
+  "66b10dfe61b927080dd7a769f258d69cf6e5d2d0b2b49029f73b109869d8fb94": {
+    "query": "SELECT id, url FROM webhooks",
     "describe": {
       "columns": [
         {
-          "name": "url",
+          "name": "id",
           "ordinal": 0,
-          "type_info": "Text"
+          "type_info": "Int64"
         },
         {
-          "name": "liftcord",
+          "name": "url",
           "ordinal": 1,
-          "type_info": "Bool"
+          "type_info": "Text"
         }
       ],
       "parameters": {
@@ -60,6 +68,16 @@
         false,
         false
       ]
+    }
+  },
+  "a043fd4969b146748774f19e71cc1333d0003403922cb13004c7449c0a807bfe": {
+    "query": "DELETE FROM webhooks WHERE url = ?",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
     }
   }
 }

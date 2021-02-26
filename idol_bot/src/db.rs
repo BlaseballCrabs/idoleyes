@@ -1,7 +1,9 @@
 use anyhow::Result;
-use async_std::prelude::*;
+use futures::prelude::*;
+use idol_predictor::algorithms::{ALGORITHMS, JOKE_ALGORITHMS};
 use log::*;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use std::collections::BTreeSet;
 
 #[derive(Clone)]
 pub struct Database {
@@ -9,8 +11,13 @@ pub struct Database {
 }
 
 pub struct Webhook {
+    pub id: i64,
     pub url: String,
-    pub liftcord: bool,
+}
+
+pub struct AlgorithmRef {
+    pub algorithm: i64,
+    pub joke: bool,
 }
 
 impl Database {
@@ -24,9 +31,49 @@ impl Database {
     }
 
     pub fn webhooks(&self) -> impl Stream<Item = Result<Webhook>> + '_ {
-        sqlx::query_as!(Webhook, "SELECT url, liftcord FROM webhooks")
+        sqlx::query_as!(Webhook, "SELECT id, url FROM webhooks")
             .fetch(&self.pool)
-            .map(|x| Ok(x?))
+            .err_into()
+    }
+
+    pub async fn try_algorithms(
+        &self,
+        webhook: &Webhook,
+        joke: bool,
+    ) -> Result<Option<BTreeSet<i64>>> {
+        let db_algs = sqlx::query_scalar!(
+            "SELECT algorithm FROM algorithms WHERE webhook_id = ? AND joke = ?",
+            webhook.id,
+            joke,
+        )
+        .fetch(&self.pool)
+        .err_into::<anyhow::Error>()
+        .try_collect::<BTreeSet<i64>>()
+        .await?;
+
+        if db_algs.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(db_algs))
+        }
+    }
+
+    pub async fn algorithms(&self, webhook: &Webhook, joke: bool) -> Result<BTreeSet<i64>> {
+        if let Some(algs) = self.try_algorithms(webhook, joke).await? {
+            Ok(algs)
+        } else {
+            let algs = if joke { JOKE_ALGORITHMS } else { ALGORITHMS };
+
+            if let Some(other_algs) = self.try_algorithms(webhook, !joke).await? {
+                Ok(algs
+                    .iter()
+                    .copied()
+                    .filter(|x| !other_algs.contains(x))
+                    .collect())
+            } else {
+                Ok(algs.iter().copied().collect())
+            }
+        }
     }
 
     pub async fn count(&self) -> Result<i32> {
