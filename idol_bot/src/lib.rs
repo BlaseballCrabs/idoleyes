@@ -106,7 +106,11 @@ pub fn send_hook<'a>(
 
                     let mut content = String::new();
 
-                    writeln!(content, "**Day {}**", day)?;
+                    if day == 2 {
+                        writeln!(content, "**WAKE UP PLAY BALL**")?;
+                    } else {
+                        writeln!(content, "**Day {}**", day)?;
+                    }
 
                     let algorithms = db.algorithms(&webhook, false).await?;
 
