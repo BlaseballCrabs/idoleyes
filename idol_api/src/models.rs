@@ -67,8 +67,8 @@ pub struct Game {
 #[serde(rename_all = "camelCase")]
 pub struct Simulation {
     pub season: isize,
-    pub day: usize,
-    pub phase: usize,
+    pub day: isize,
+    pub phase: isize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
