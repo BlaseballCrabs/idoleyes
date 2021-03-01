@@ -1,5 +1,5 @@
 use super::models::{
-    AtBatLeader, Event, Game, GameUpdate, GameUpdates, Idol, PitchingStats, Position,
+    AtBatLeader, Event, Game, GameUpdate, GameUpdates, Idol, Idols, PitchingStats, Position,
     StrikeoutLeader, Team,
 };
 use anyhow::Result;
@@ -71,7 +71,7 @@ impl State {
             .map_err(|x| x.into_inner())?
             .body_json()
             .await
-            .map_err(|x| x.into_inner())?;
+            .unwrap_or_else(|_| Vec::new());
         debug!("Getting at-bats");
         let at_bats: Vec<AtBatLeader> = client
             .get("https://api.blaseball-reference.com/v1/seasonLeaders")
@@ -86,7 +86,7 @@ impl State {
             .map_err(|x| x.into_inner())?
             .body_json()
             .await
-            .map_err(|x| x.into_inner())?;
+            .unwrap_or_else(|_| Vec::new());
         debug!("Getting pitcher stats");
         let pitcher_stats: Vec<PitchingStats> = client
             .get("https://api.blaseball-reference.com/v1/playerStats")
@@ -101,7 +101,7 @@ impl State {
             .map_err(|x| x.into_inner())?
             .body_json()
             .await
-            .map_err(|x| x.into_inner())?;
+            .unwrap_or_else(|_| Vec::new());
         debug!("Getting teams");
         let teams: Vec<Team> = client
             .get("https://www.blaseball.com/database/allTeams")
@@ -134,9 +134,10 @@ impl State {
             .send()
             .await
             .map_err(|x| x.into_inner())?
-            .body_json::<Vec<Idol>>()
+            .body_json::<Idols>()
             .await
-            .map_err(|x| x.into_inner())?;
+            .map_err(|x| x.into_inner())?
+            .idols;
         Ok(Self {
             strikeouts,
             at_bats,

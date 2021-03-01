@@ -102,9 +102,14 @@ pub struct Team {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(transparent)]
 pub struct Idol {
     pub player_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Idols {
+    pub idols: Vec<Idol>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
