@@ -3,10 +3,12 @@ use anyhow::Result;
 use async_std::prelude::*;
 use idol_api::models::Event;
 use log::*;
+use std::time::{Duration, Instant};
 
 pub struct Client {
     url: String,
     decoder: async_sse::Decoder<surf::Response>,
+    opened_at: Instant,
 }
 
 impl Client {
@@ -33,7 +35,14 @@ impl Client {
         Ok(Self {
             decoder,
             url: url.to_string(),
+            opened_at: Instant::now(),
         })
+    }
+
+    async fn reconnect(&mut self) -> Result<()> {
+        debug!("Reconnecting...");
+        *self = Self::connect(&self.url).await?;
+        Ok(())
     }
 
     pub async fn next_event(&mut self) -> Result<Event> {
@@ -50,8 +59,7 @@ impl Client {
                         Err(err) => {
                             error!("Couldn't parse event: {}", err);
                             std::thread::sleep(std::time::Duration::from_millis(5000));
-                            debug!("Reconnecting...");
-                            *self = Self::connect(&self.url).await?;
+                            self.reconnect().await?;
                             continue;
                         }
                     };
@@ -64,15 +72,21 @@ impl Client {
                 Some(Err(err)) => {
                     error!("Error receiving event: {}", err);
                     std::thread::sleep(std::time::Duration::from_millis(5000));
-                    debug!("Reconnecting...");
-                    *self = Self::connect(&self.url).await?;
+                    self.reconnect().await?;
                     continue;
                 }
                 None => {
-                    warn!("Event stream ended");
-                    std::thread::sleep(std::time::Duration::from_millis(5000));
-                    debug!("Reconnecting...");
-                    *self = Self::connect(&self.url).await?;
+                    let elapsed = self.opened_at.elapsed();
+                    if elapsed < Duration::from_secs(30) {
+                        error!("Event stream ended in {:?}", elapsed);
+                        std::thread::sleep(std::time::Duration::from_millis(10000));
+                    } else if elapsed <= Duration::from_secs(44) {
+                        warn!("Event stream ended in {:?}", elapsed);
+                        std::thread::sleep(std::time::Duration::from_millis(5000));
+                    } else {
+                        debug!("Event stream ended in {:?}", elapsed);
+                    }
+                    self.reconnect().await?;
                     continue;
                 }
             }
