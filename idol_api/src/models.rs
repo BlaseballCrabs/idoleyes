@@ -34,14 +34,15 @@ pub struct Player {
     pub pitching_rating: f64,
     #[serde(default)]
     pub hitting_rating: f64,
+    #[serde(default)]
+    #[serde(with = "serde_with::rust::default_on_null")]
+    pub league_team_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Position {
     pub id: String,
-    #[serde(with = "serde_with::rust::default_on_null")]
-    pub team_id: String,
     pub data: Player,
 }
 

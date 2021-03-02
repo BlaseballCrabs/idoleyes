@@ -68,12 +68,15 @@ algorithm!(
         let game = state
             .games
             .iter()
-            .find(|x| x.home_team == position.team_id || x.away_team == position.team_id)
+            .find(|x| {
+                x.home_team == position.data.league_team_id
+                    || x.away_team == position.data.league_team_id
+            })
             .ok_or_else(|| anyhow!("No Best game!"))?;
         let teams = game
             .teams(state)
             .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
-        let (team, opponent, team_pos) = if teams.away.id == position.team_id {
+        let (team, opponent, team_pos) = if teams.away.id == position.data.league_team_id {
             (teams.away, teams.home, TeamPosition::Away)
         } else {
             (teams.home, teams.away, TeamPosition::Home)
@@ -111,12 +114,12 @@ algorithm!(
         let game = state
             .games
             .iter()
-            .find(|x| x.home_team == position.team_id || x.away_team == position.team_id)
+            .find(|x| x.home_team == position.data.league_team_id || x.away_team == position.data.league_team_id)
             .ok_or_else(|| anyhow!("No Best game!"))?;
         let teams = game
             .teams(state)
             .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
-        let (team, opponent, team_pos) = if teams.away.id == position.team_id {
+        let (team, opponent, team_pos) = if teams.away.id == position.data.league_team_id {
             (teams.away, teams.home, TeamPosition::Away)
         } else {
             (teams.home, teams.away, TeamPosition::Home)
@@ -209,7 +212,7 @@ algorithm!(
         let teams = game
             .teams(state)
             .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
-        let (team, opponent, team_pos) = if teams.away.id == position.team_id {
+        let (team, opponent, team_pos) = if teams.away.id == position.data.league_team_id {
             (teams.away, teams.home, TeamPosition::Away)
         } else {
             (teams.home, teams.away, TeamPosition::Home)
@@ -231,6 +234,52 @@ algorithm!(
             pitcher,
             score: 1.0,
         })
+    })
+);
+
+algorithm!(
+    BATTING_MULTIPLIER,
+    @ "Best Batter by Multiplier",
+    [],
+    Unforbidden,
+    Custom(|state| {
+        let (position, score) = state
+            .players
+            .iter()
+            .filter_map(|x| match &x.data.name[..] {
+                "York Silk" => Some((x, 2.0)),
+                "Wyatt Glover" => Some((x, 5.0)),
+                _ => None,
+            })
+            .max_by_key(|x| n64(x.1))
+            .ok_or_else(|| anyhow!("No best multiplier!"))?;
+        let game = state
+            .games
+            .iter()
+            .find(|x| x.home_team == position.data.league_team_id || x.away_team == position.data.league_team_id)
+            .ok_or_else(|| anyhow!("No game with {}!", position.data.name))?;
+        let teams = game
+            .teams(state)
+            .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
+        let (team, opponent, team_pos) = if teams.away.id == position.data.league_team_id {
+            (teams.away, teams.home, TeamPosition::Away)
+        } else {
+            (teams.home, teams.away, TeamPosition::Home)
+        };
+        let id = &position.data.id;
+        let player = &position.data;
+        let pitcher = PitcherRef {
+            id,
+            position,
+            player,
+            stats: None,
+            game,
+            state,
+            team,
+            opponent,
+            team_pos,
+        };
+        Ok(ScoredPitcher { pitcher, score })
     })
 );
 
@@ -286,5 +335,6 @@ algorithms! {
         NAME_LENGTH,
         GAMES_PER_GAME,
         GAMES_NAME_PER_GAME,
+        BATTING_MULTIPLIER,
     ];
 }
