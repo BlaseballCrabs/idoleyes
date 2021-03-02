@@ -104,7 +104,7 @@ impl Client {
                         debug!("Postseason");
                         if !data.value.games.tomorrow_schedule.is_empty() {
                             debug!("Betting allowed");
-                            send_hook(&db, &data, true, false).await?;
+                            send_hook(&db, &data, true, None).await?;
                         } else {
                             debug!("No betting");
                         }
@@ -116,7 +116,7 @@ impl Client {
                     }
                     2 => {
                         debug!("Regular season");
-                        send_hook(&db, &data, true, false).await?;
+                        send_hook(&db, &data, true, None).await?;
                         let day = data.value.games.sim.day;
                         while data.value.games.sim.day == day {
                             debug!("Waiting for next day...");

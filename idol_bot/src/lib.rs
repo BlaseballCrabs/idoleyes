@@ -71,7 +71,7 @@ pub fn send_hook<'a>(
     db: &'a Database,
     data: &'a Event,
     retry: bool,
-    test_mode: bool,
+    test_mode: Option<usize>,
 ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
     Box::pin(async move {
         let day = data.value.games.sim.day + 2;
@@ -83,7 +83,7 @@ pub fn send_hook<'a>(
                 if retry {
                     debug!("Retrying...");
                     return send_hook(db, data, false, test_mode).await;
-                } else if test_mode {
+                } else if test_mode.is_some() {
                     debug!("Sending test message");
                     Arc::from(vec![Some(
                         "Error getting best idols, ignoring due to test mode".into(),
@@ -124,7 +124,10 @@ pub fn send_hook<'a>(
                     let joke_algorithms = joke_algorithm_ids
                         .iter()
                         .filter_map(|&x| best.get(x as usize).map(Option::as_ref).flatten());
-                    if let Some(joke_algorithm) = joke_algorithms.choose(&mut thread_rng()) {
+                    let joke_algorithm = test_mode
+                        .and_then(|x| joke_algorithms.clone().nth(x))
+                        .or_else(|| joke_algorithms.choose(&mut thread_rng()));
+                    if let Some(joke_algorithm) = joke_algorithm {
                         write!(content, "{}", joke_algorithm)?;
                     }
 

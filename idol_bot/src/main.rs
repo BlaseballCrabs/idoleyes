@@ -14,10 +14,7 @@ use log::*;
 async fn main() -> Result<()> {
     logger::init()?;
 
-    let test_mode: usize = dotenv::var("TEST_MODE")
-        .ok()
-        .and_then(|x| x.parse().ok())
-        .unwrap_or(0);
+    let test_mode: Option<usize> = dotenv::var("TEST_MODE").ok().and_then(|x| x.parse().ok());
     let stream_url = "https://www.blaseball.com/events/streamData";
 
     let db_uri = dotenv::var("DATABASE_URL")?;
@@ -43,11 +40,11 @@ async fn main() -> Result<()> {
     let mut client = Client::connect(stream_url).await?;
     debug!("Connected to Blaseball");
 
-    if test_mode != 0 {
+    if let Some(test_mode) = test_mode {
         let data = client.next_event().await?;
         debug!("Phase {}", data.value.games.sim.phase);
         info!("TESTING MODE");
-        send_hook(&db, &data, false, true).await?;
+        send_hook(&db, &data, false, Some(test_mode)).await?;
     } else {
         let bot = task::spawn(client.run(&db));
         let listener = task::spawn(oauth_listener::listen(
