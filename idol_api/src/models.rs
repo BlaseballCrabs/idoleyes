@@ -61,6 +61,7 @@ pub struct Game {
     pub away_odds: f64,
     pub home_odds: f64,
     pub inning: isize,
+    pub day: isize,
     pub season: isize,
 }
 
@@ -116,7 +117,6 @@ pub struct Idols {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GameUpdates {
-    pub next_page: String,
     pub data: Vec<GameUpdate>,
 }
 
@@ -124,4 +124,12 @@ pub struct GameUpdates {
 #[serde(rename_all = "camelCase")]
 pub struct GameUpdate {
     pub data: Game,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FeedItem {
+    pub team_tags: [String; 1],
+    pub day: isize,
+    pub season: isize,
 }

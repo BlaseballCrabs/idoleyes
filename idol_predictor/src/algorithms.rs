@@ -177,12 +177,23 @@ algorithm!(GAMES_PER_GAME, "games per game", [], Unforbidden, |x| {
     let normal_games = x.stats?.games;
     let extra = x
         .state
-        .black_hole_sun_2
+        .sun_2
         .iter()
-        .map(|y| &y.data)
+        .chain(&x.state.black_hole)
         .take_while(|y| y.season == x.state.season)
-        .filter_map(|y| y.pitcher_ids())
-        .filter(|y| y.any(|z| z == x.id))
+        .filter_map(|item| {
+            let team = &item.team_tags[0];
+            let game = item.game(&x.state)?;
+            let pitchers = game.pitcher_ids()?;
+            Some((team, game, pitchers))
+        })
+        .filter(|(team, game, pitchers)| {
+            if *team == &game.home_team {
+                pitchers.home == x.id
+            } else {
+                pitchers.away == x.id
+            }
+        })
         .count();
     let games = normal_games + extra;
     games as f64 / normal_games as f64

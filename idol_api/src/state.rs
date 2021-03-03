@@ -1,6 +1,6 @@
 use super::models::{
-    AtBatLeader, Event, Game, GameUpdate, GameUpdates, Idol, Idols, PitchingStats, Position,
-    StrikeoutLeader, Team,
+    AtBatLeader, Event, FeedItem, Game, GameUpdate, GameUpdates, Idol, Idols, PitchingStats,
+    Position, StrikeoutLeader, Team,
 };
 use anyhow::Result;
 use log::*;
@@ -14,8 +14,10 @@ pub struct State {
     pub teams: Vec<Team>,
     pub players: Vec<Position>,
     pub games: Vec<Game>,
+    pub past_games: Vec<GameUpdate>,
     pub idols: Vec<Idol>,
-    pub black_hole_sun_2: Vec<GameUpdate>,
+    pub black_hole: Vec<FeedItem>,
+    pub sun_2: Vec<FeedItem>,
     pub season: isize,
 }
 
@@ -56,6 +58,11 @@ impl State {
         struct StatsQuery {
             category: &'static str,
             player_ids: String,
+            season: isize,
+        }
+
+        #[derive(Serialize)]
+        struct GamesQuery {
             season: isize,
         }
 
@@ -121,14 +128,37 @@ impl State {
             .await
             .map_err(|x| x.into_inner())?
             .data;
-        debug!("Getting Sun 2 and Black Hole events");
-        let black_hole_sun_2 = client
-            .get("https://api.sibr.dev/chronicler/v1/games/updates?search=%22Sun%202%22%20or%20%22Black%20Hole%22&count=1000&order=desc")
+        debug!("Getting Black Hole events");
+        let black_hole = client
+            .get("https://www.blaseball.com/database/feed/global?type=157")
             .send()
-            .await.map_err(|x| x.into_inner())?
+            .await
+            .map_err(|x| x.into_inner())?
+            .body_json::<Vec<FeedItem>>()
+            .await
+            .map_err(|x| x.into_inner())?;
+        debug!("Getting Sun 2 events");
+        let sun_2 = client
+            .get("https://www.blaseball.com/database/feed/global?type=156&limit=100")
+            .send()
+            .await
+            .map_err(|x| x.into_inner())?
+            .body_json::<Vec<FeedItem>>()
+            .await
+            .map_err(|x| x.into_inner())?;
+        debug!("Getting past games");
+        let past_games = client
+            .get("https://api.sibr.dev/chronicler/v1/games")
+            .query(&GamesQuery { season })
+            .map_err(|x| x.into_inner())?
+            .send()
+            .await
+            .map_err(|x| x.into_inner())?
             .body_json::<GameUpdates>()
-            .await.map_err(|x| x.into_inner())?
+            .await
+            .map_err(|x| x.into_inner())?
             .data;
+        debug!("Getting idols");
         let idols = client
             .get("https://www.blaseball.com/api/getIdols")
             .send()
@@ -145,8 +175,10 @@ impl State {
             teams,
             players,
             games,
+            past_games,
             idols,
-            black_hole_sun_2,
+            black_hole,
+            sun_2,
             season,
         })
     }

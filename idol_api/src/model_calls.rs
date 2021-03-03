@@ -1,4 +1,4 @@
-use super::models::{Game, PitchingStats, Position, Team};
+use super::models::{FeedItem, Game, PitchingStats, Position, Team};
 use super::team_pair::{TeamPair, Transpose};
 use super::State;
 
@@ -59,6 +59,16 @@ impl Team {
                 .iter()
                 .find(|y| x == &y.player_id)
                 .map(|y| y.strikeouts)
+        })
+    }
+}
+
+impl FeedItem {
+    pub fn game<'a>(&self, state: &'a State) -> Option<&'a Game> {
+        state.past_games.iter().map(|x| &x.data).find(|game| {
+            self.day == game.day
+                && self.season == game.season
+                && game.team_ids().any(|team_id| self.team_tags[0] == team_id)
         })
     }
 }
