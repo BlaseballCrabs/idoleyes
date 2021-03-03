@@ -100,7 +100,7 @@ impl Client {
                 let mut data = self.next_event().await?;
                 debug!("Phase {}", data.value.games.sim.phase);
                 match data.value.games.sim.phase {
-                    4 | 10 | 11 | 13 | 14 => {
+                    9 | 10 | 11 => {
                         debug!("Postseason");
                         if !data.value.games.tomorrow_schedule.is_empty() {
                             debug!("Betting allowed");
@@ -114,7 +114,7 @@ impl Client {
                         }
                         debug!("Games in progress");
                     }
-                    2 => {
+                    2 | 4 | 6 => {
                         debug!("Regular season");
                         send_hook(&db, &data, true, None).await?;
                         let day = data.value.games.sim.day;
