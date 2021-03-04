@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PitchingStats {
@@ -54,10 +55,10 @@ pub struct Game {
     pub away_pitcher_name: Option<String>,
     pub home_pitcher: Option<String>,
     pub home_pitcher_name: Option<String>,
-    pub away_team: String,
-    pub away_team_name: String,
+    pub away_team: Cow<'static, str>,
+    pub away_team_name: Cow<'static, str>,
     pub home_team: String,
-    pub home_team_name: String,
+    pub home_team_name: Cow<'static, str>,
     pub away_odds: f64,
     pub home_odds: f64,
     pub inning: isize,
@@ -95,7 +96,7 @@ pub struct Event {
 #[serde(rename_all = "camelCase")]
 pub struct Team {
     pub id: String,
-    pub full_name: String,
+    pub full_name: Cow<'static, str>,
     pub lineup: Vec<String>,
     pub rotation: Vec<String>,
     pub bullpen: Vec<String>,

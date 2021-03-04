@@ -1,9 +1,11 @@
 use super::{Algorithm, Forbidden::*, PitcherRef, PrintedStat, ScoredPitcher, Strategy::*};
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use average::Mean;
+use idol_api::models::{Game, Team};
 use idol_api::team_pair::TeamPosition;
 use noisy_float::prelude::*;
 use paste::paste;
+use std::borrow::Cow;
 
 macro_rules! algorithm {
     ($id:ident, _, [$($stat:ident),*], $forbidden:ident, $($strat:tt)*) => {
@@ -98,6 +100,8 @@ algorithm!(
     })
 );
 
+const CRABS: &str = "8d87c468-699a-47a8-b40d-cfb73a5660ad";
+
 algorithm!(
     BEST_BEST,
     @ "Best Best by Stars",
@@ -111,33 +115,82 @@ algorithm!(
             .map(|x| (x, (x.data.pitching_rating * 10.0).floor() / 2.0))
             .max_by_key(|x| n64(x.1))
             .ok_or_else(|| anyhow!("No Best player!"))?;
-        let game = state
-            .games
-            .iter()
-            .find(|x| x.home_team == position.data.league_team_id || x.away_team == position.data.league_team_id)
-            .ok_or_else(|| anyhow!("No Best game!"))?;
-        let teams = game
-            .teams(state)
-            .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
-        let (team, opponent, team_pos) = if teams.away.id == position.data.league_team_id {
-            (teams.away, teams.home, TeamPosition::Away)
+        let game = state.games.iter().find(|x| {
+            x.home_team == position.data.league_team_id
+                || x.away_team == position.data.league_team_id
+        });
+        if let Some(game) = game {
+            let teams = game
+                .teams(state)
+                .ok_or_else(|| anyhow!("Couldn't get teams!"))?;
+            let (team, opponent, team_pos) = if teams.away.id == position.data.league_team_id {
+                (teams.away, teams.home, TeamPosition::Away)
+            } else {
+                (teams.home, teams.away, TeamPosition::Home)
+            };
+            let id = &position.data.id;
+            let player = &position.data;
+            let pitcher = PitcherRef {
+                id,
+                position,
+                player,
+                stats: None,
+                game,
+                state,
+                team,
+                opponent,
+                team_pos,
+            };
+            Ok(ScoredPitcher { pitcher, score })
+        } else if position.data.league_team_id == CRABS {
+            let team = state
+                .teams
+                .iter()
+                .find(|x| x.id == CRABS)
+                .ok_or_else(|| anyhow!("Missing Crabs!"))?;
+            let id = &position.data.id;
+            let player = &position.data;
+            static BLACK_HOLE: Team = Team {
+                id: String::new(),
+                full_name: Cow::Borrowed("Black Hole"),
+                lineup: Vec::new(),
+                rotation: Vec::new(),
+                bullpen: Vec::new(),
+                bench: Vec::new(),
+                perm_attr: Vec::new(),
+            };
+            let team_pos = TeamPosition::Away;
+            static GAME: Game = Game {
+                id: String::new(),
+                away_pitcher: None,
+                away_pitcher_name: None,
+                home_pitcher: None,
+                home_pitcher_name: None,
+                away_team: Cow::Borrowed(&CRABS),
+                away_team_name: Cow::Borrowed("Baltimore Crabs"),
+                home_team: String::new(),
+                home_team_name: Cow::Borrowed("Black Hole"),
+                away_odds: 0.0,
+                home_odds: 0.0,
+                inning: 0,
+                day: 0,
+                season: 0,
+            };
+            let pitcher = PitcherRef {
+                id,
+                position,
+                player,
+                stats: None,
+                game: &GAME,
+                state,
+                team,
+                opponent: &BLACK_HOLE,
+                team_pos,
+            };
+            Ok(ScoredPitcher { pitcher, score })
         } else {
-            (teams.home, teams.away, TeamPosition::Home)
-        };
-        let id = &position.data.id;
-        let player = &position.data;
-        let pitcher = PitcherRef {
-            id,
-            position,
-            player,
-            stats: None,
-            game,
-            state,
-            team,
-            opponent,
-            team_pos,
-        };
-        Ok(ScoredPitcher { pitcher, score })
+            bail!("No Best game!");
+        }
     })
 );
 
